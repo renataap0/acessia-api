@@ -1,4 +1,5 @@
-const db = require("../config/db");
+module.exports = require("./usuariosRestController");
+/*
 
 const listarUsuarios = async (req, res) => {
   try {
@@ -51,3 +52,4 @@ module.exports = {
   buscarUsuarioPorId,
   criarUsuario
 };
+*/

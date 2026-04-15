@@ -1,4 +1,5 @@
-const express = require("express");
+module.exports = require("./solicitacoesRoutes");
+/*
 const router = express.Router();
 const {
   listarSolicitacoes,
@@ -11,3 +12,4 @@ router.get("/:id", buscarSolicitacaoPorId);
 router.post("/", criarSolicitacao);
 
 module.exports = router;
+*/

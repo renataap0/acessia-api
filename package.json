@@ -1,13 +1,18 @@
 {
   "name": "acessia-api",
   "version": "1.0.0",
-  "description": "",
-  "main": "index.js",
+  "description": "API REST da plataforma AcessIA para gestao de acessibilidade, inclusao e apoio a lideranca.",
+  "main": "src/server.js",
   "scripts": {
     "dev": "nodemon src/server.js",
     "start": "node src/server.js"
   },
-  "keywords": [],
+  "keywords": [
+    "acessibilidade",
+    "inclusao",
+    "express",
+    "mysql"
+  ],
   "author": "",
   "license": "ISC",
   "type": "commonjs",

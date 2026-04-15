@@ -1,4 +1,5 @@
-const db = require("../config/db");
+module.exports = require("./solicitacoesRestController");
+/*
 
 const listarSolicitacoes = async (req, res) => {
   try {
@@ -77,3 +78,4 @@ module.exports = {
   buscarSolicitacaoPorId,
   criarSolicitacao
 };
+*/
