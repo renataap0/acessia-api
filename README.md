@@ -15,6 +15,15 @@ encaminhamentos, feedbacks, arquivos, logs de IA e indicadores para gestores e R
 - cors
 - nodemon
 
+## Como rodar o projeto
+
+1. Crie o banco MySQL
+2. Execute o arquivo `database/schema.sql`
+3. Execute o arquivo `database/seed.sql`
+4. Configure o `.env`
+5. Rode `npm install`
+6. Rode `npm run dev`
+
 ## Estrutura de pastas
 
 ```txt
@@ -506,3 +515,4 @@ A camada `src/services/iaService.js` concentra a triagem simulada. Para integrar
 um provedor de IA futuramente, substitua ou complemente esse service mantendo o
 contrato da rota `POST /api/ia/triagem`. Os logs podem ser persistidos em
 `logs_ia` pela rota `POST /api/logs-ia`.
+
