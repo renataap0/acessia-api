@@ -6,6 +6,7 @@ const ID_COLUMN = "idsolucao_relacionada";
 const CREATE_FIELDS = [
   "similaridade",
   "aplicacao_solucao",
+  "foi_aplicada",
   "data_aplicacao",
   "solicitacoes_idsolicitacoes",
   "solucoes_idsolucoes"

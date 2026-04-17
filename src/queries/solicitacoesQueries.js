@@ -9,36 +9,67 @@ const {
 const TABLE = "solicitacoes";
 const ID_COLUMN = "idsolicitacoes";
 const CREATE_FIELDS = [
+  "usuarios_idusuarios",
   "canal",
   "tipo_barreira",
+  "dificuldade_encontrada",
+  "contexto",
+  "impacto_trabalho",
+  "descricao",
   "urgencia",
+  "prioridade",
+  "preferencia_comunicacao",
+  "necessidade_apoio_imediato",
   "area_responsavel",
   "status",
   "precisa_profissional",
   "confianca_ia",
+  "classificacao_inicial_ia",
   "classificacao_ia_json",
-  "atualizado_em",
+  "sla_horas",
+  "prazo_sla",
+  "data_primeira_resposta",
+  "data_resolucao",
+  "recorrencia_chave",
   "criado_em",
-  "usuarios_idusuarios"
+  "atualizado_em"
 ];
 const UPDATE_FIELDS = [
+  "usuarios_idusuarios",
+  "canal",
   "tipo_barreira",
+  "dificuldade_encontrada",
+  "contexto",
+  "impacto_trabalho",
+  "descricao",
   "urgencia",
+  "prioridade",
+  "preferencia_comunicacao",
+  "necessidade_apoio_imediato",
   "area_responsavel",
   "status",
   "precisa_profissional",
   "confianca_ia",
+  "classificacao_inicial_ia",
   "classificacao_ia_json",
-  "atualizado_em",
-  "usuarios_idusuarios"
+  "sla_horas",
+  "prazo_sla",
+  "data_primeira_resposta",
+  "data_resolucao",
+  "recorrencia_chave",
+  "atualizado_em"
 ];
 
 const listar = async (filters = {}) => {
   const where = buildWhereClause(pickDefined(filters, [
+    "canal",
     "tipo_barreira",
+    "urgencia",
+    "prioridade",
     "area_responsavel",
     "status",
-    "usuarios_idusuarios"
+    "usuarios_idusuarios",
+    "necessidade_apoio_imediato"
   ]));
 
   const [rows] = await db.query(

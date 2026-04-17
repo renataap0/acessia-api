@@ -1,317 +1,304 @@
--- =====================================================
--- Banco de dados: acessia
--- Projeto: AcessIA
--- Descricao: plataforma de gestao de acessibilidade e inclusao corporativa.
---
--- Este script recria o banco inteiro e pode ser executado do inicio ao fim
--- no MySQL Workbench ou no terminal MySQL.
--- =====================================================
+-- MySQL Workbench Forward Engineering
 
-DROP DATABASE IF EXISTS acessia;
-CREATE DATABASE acessia;
-ALTER DATABASE acessia
-  CHARACTER SET utf8mb4
-  COLLATE utf8mb4_unicode_ci;
-USE acessia;
+SET @OLD_UNIQUE_CHECKS=@@UNIQUE_CHECKS, UNIQUE_CHECKS=0;
+SET @OLD_FOREIGN_KEY_CHECKS=@@FOREIGN_KEY_CHECKS, FOREIGN_KEY_CHECKS=0;
+SET @OLD_SQL_MODE=@@SQL_MODE, SQL_MODE='ONLY_FULL_GROUP_BY,STRICT_TRANS_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION';
 
--- =====================================================
--- Tabela: usuarios
--- Armazena colaboradores, gestores, RH e profissionais envolvidos no fluxo.
--- Relacionamento:
---   usuarios 1:N solicitacoes
---   usuarios 1:N feedbacks
---   usuarios 1:N arquivos
--- =====================================================
-CREATE TABLE usuarios (
-  idusuarios INT NOT NULL AUTO_INCREMENT COMMENT 'Chave primaria do usuario.',
-  nome VARCHAR(100) NOT NULL DEFAULT '' COMMENT 'Nome completo do usuario.',
-  email VARCHAR(150) NULL DEFAULT NULL COMMENT 'E-mail corporativo do usuario.',
-  tipo_usuario VARCHAR(30) NOT NULL DEFAULT 'colaborador' COMMENT 'Perfil: colaborador, gestor, rh ou profissional.',
-  unidade VARCHAR(100) NOT NULL DEFAULT '' COMMENT 'Unidade, filial ou local de trabalho.',
-  cargo VARCHAR(100) NOT NULL DEFAULT '' COMMENT 'Cargo ou funcao do usuario.',
-  ativo TINYINT(1) NOT NULL DEFAULT 1 COMMENT 'Indica se o usuario esta ativo no sistema.',
-  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT 'Data de criacao do registro.',
-  criado_em DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT 'Alias de criacao usado por partes da API.',
-  atualizado_em DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT 'Data da ultima atualizacao.',
-  PRIMARY KEY (idusuarios),
-  UNIQUE KEY uk_usuarios_email (email),
-  INDEX idx_usuarios_tipo_usuario (tipo_usuario),
-  INDEX idx_usuarios_ativo (ativo)
-) ENGINE=InnoDB
-  COMMENT='Usuarios da plataforma AcessIA.';
+-- -----------------------------------------------------
+-- Schema mydb
+-- -----------------------------------------------------
+-- -----------------------------------------------------
+-- Schema acessia
+-- -----------------------------------------------------
+DROP SCHEMA IF EXISTS `acessia` ;
 
--- =====================================================
--- Tabela: solicitacoes
--- Registra dificuldades/barreiras informadas pelos colaboradores.
--- Tipos de barreira esperados:
---   comunicacao, mobilidade, digital, cognitiva, sensorial,
---   organizacional, atitudinal.
--- Relacionamento:
---   cada solicitacao pode pertencer a um usuario.
--- =====================================================
-CREATE TABLE solicitacoes (
-  idsolicitacoes INT NOT NULL AUTO_INCREMENT COMMENT 'Chave primaria da solicitacao.',
-  canal VARCHAR(30) NOT NULL DEFAULT 'web' COMMENT 'Canal de entrada: web, app, totem ou outro.',
-  tipo_barreira VARCHAR(30) NOT NULL DEFAULT 'organizacional' COMMENT 'Tipo da barreira registrada.',
-  urgencia VARCHAR(20) NOT NULL DEFAULT 'media' COMMENT 'Nivel de urgencia: baixa, media, alta ou critica.',
-  area_responsavel VARCHAR(100) NOT NULL DEFAULT 'RH' COMMENT 'Area responsavel pela tratativa.',
-  status VARCHAR(30) NOT NULL DEFAULT 'aberta' COMMENT 'Status da solicitacao no fluxo de atendimento.',
-  descricao TEXT NULL COMMENT 'Descricao livre da dificuldade relatada.',
-  precisa_profissional TINYINT(1) NOT NULL DEFAULT 0 COMMENT 'Booleano: 1 quando precisa de profissional especializado.',
-  confianca_ia DECIMAL(5,2) NOT NULL DEFAULT 0.00 COMMENT 'Confianca da classificacao de IA, de 0.00 a 1.00.',
-  classificacao_ia_json JSON NULL COMMENT 'Payload JSON com detalhes da classificacao da IA.',
-  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT 'Data de criacao do registro.',
-  criado_em DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT 'Data de criacao usada por partes da API.',
-  atualizado_em DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT 'Data da ultima atualizacao.',
-  usuarios_idusuarios INT NULL DEFAULT NULL COMMENT 'FK para o usuario solicitante.',
-  PRIMARY KEY (idsolicitacoes),
-  INDEX idx_solicitacoes_usuarios (usuarios_idusuarios),
-  INDEX idx_solicitacoes_tipo_barreira (tipo_barreira),
-  INDEX idx_solicitacoes_urgencia (urgencia),
-  INDEX idx_solicitacoes_status (status),
-  INDEX idx_solicitacoes_area_responsavel (area_responsavel),
-  INDEX idx_solicitacoes_created_at (created_at),
-  -- Relacionamento solicitacoes -> usuarios.
-  CONSTRAINT fk_solicitacoes_usuarios
-    FOREIGN KEY (usuarios_idusuarios)
-    REFERENCES usuarios (idusuarios)
-    ON DELETE SET NULL
-    ON UPDATE CASCADE
-) ENGINE=InnoDB
-  COMMENT='Solicitacoes de acessibilidade abertas pelos colaboradores.';
+-- -----------------------------------------------------
+-- Schema acessia
+-- -----------------------------------------------------
+CREATE SCHEMA IF NOT EXISTS `acessia` DEFAULT CHARACTER SET utf8mb3 ;
+USE `acessia` ;
 
--- =====================================================
--- Tabela: solucoes
--- Catalogo de solucoes imediatas ou estruturais para barreiras de acesso.
--- Relacionamento:
---   solucoes N:N solicitacoes por solucoes_has_solicitacoes
---   solucoes 1:N solucao_relacionada
--- =====================================================
-CREATE TABLE solucoes (
-  idsolucoes INT NOT NULL AUTO_INCREMENT COMMENT 'Chave primaria da solucao.',
-  titulo VARCHAR(150) NOT NULL DEFAULT '' COMMENT 'Titulo resumido da solucao.',
-  descricao_problema TEXT NULL COMMENT 'Descricao do problema que a solucao atende.',
-  solucao_imediata TEXT NULL COMMENT 'Acao de curto prazo sugerida.',
-  solucao_estrutural TEXT NULL COMMENT 'Acao estrutural ou preventiva sugerida.',
-  tipo_barreira VARCHAR(30) NOT NULL DEFAULT 'organizacional' COMMENT 'Tipo de barreira relacionado a solucao.',
-  publico_indicado VARCHAR(150) NULL DEFAULT NULL COMMENT 'Publico ou perfil indicado para a solucao.',
-  area_responsavel VARCHAR(100) NOT NULL DEFAULT 'RH' COMMENT 'Area responsavel pela solucao.',
-  ativo TINYINT(1) NOT NULL DEFAULT 1 COMMENT 'Booleano: 1 para solucao ativa, 0 para inativa.',
-  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT 'Data de criacao do registro.',
-  criado_em DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT 'Alias de criacao usado por partes da API.',
-  atualizado_em DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT 'Data da ultima atualizacao.',
-  PRIMARY KEY (idsolucoes),
-  INDEX idx_solucoes_tipo_barreira (tipo_barreira),
-  INDEX idx_solucoes_area_responsavel (area_responsavel),
-  INDEX idx_solucoes_ativo (ativo)
-) ENGINE=InnoDB
-  COMMENT='Catalogo de solucoes de acessibilidade e inclusao.';
+-- -----------------------------------------------------
+-- Table `acessia`.`usuarios`
+-- -----------------------------------------------------
+DROP TABLE IF EXISTS `acessia`.`usuarios` ;
 
--- =====================================================
--- Tabela: encaminhamento
--- Registra encaminhamentos internos para tratar uma solicitacao.
--- Relacionamento:
---   cada encaminhamento pertence a uma solicitacao.
--- =====================================================
-CREATE TABLE encaminhamento (
-  idencaminhamento INT NOT NULL AUTO_INCREMENT COMMENT 'Chave primaria do encaminhamento.',
-  setor_destino VARCHAR(100) NULL DEFAULT NULL COMMENT 'Setor para onde a solicitacao foi encaminhada.',
-  profissional_responsavel VARCHAR(100) NOT NULL DEFAULT '' COMMENT 'Pessoa ou profissional responsavel pelo atendimento.',
-  observacao TEXT NULL COMMENT 'Observacoes sobre o encaminhamento.',
-  data_encaminhamento DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT 'Data em que o encaminhamento foi feito.',
-  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT 'Data de criacao do registro.',
-  criado_em DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT 'Data de criacao usada por partes da API.',
-  atualizado_em DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT 'Data da ultima atualizacao.',
-  solicitacoes_idsolicitacoes INT NULL DEFAULT NULL COMMENT 'FK para a solicitacao encaminhada.',
-  PRIMARY KEY (idencaminhamento),
-  INDEX idx_encaminhamento_solicitacoes (solicitacoes_idsolicitacoes),
-  INDEX idx_encaminhamento_profissional (profissional_responsavel),
-  INDEX idx_encaminhamento_data (data_encaminhamento),
-  -- Relacionamento encaminhamento -> solicitacoes.
-  CONSTRAINT fk_encaminhamento_solicitacoes
-    FOREIGN KEY (solicitacoes_idsolicitacoes)
-    REFERENCES solicitacoes (idsolicitacoes)
-    ON DELETE CASCADE
-    ON UPDATE CASCADE
-) ENGINE=InnoDB
-  COMMENT='Encaminhamentos das solicitacoes para areas ou profissionais responsaveis.';
+CREATE TABLE IF NOT EXISTS `acessia`.`usuarios` (
+  `idusuarios` INT NOT NULL AUTO_INCREMENT,
+  `nome` VARCHAR(100) NOT NULL,
+  `email` VARCHAR(150) NOT NULL,
+  `tipo_usuario` VARCHAR(20) NOT NULL,
+  `unidade` VARCHAR(100) NOT NULL,
+  `cargo` VARCHAR(100) NOT NULL,
+  `created_at` DATETIME NOT NULL,
+  PRIMARY KEY (`idusuarios`))
+ENGINE = InnoDB
+AUTO_INCREMENT = 11
+DEFAULT CHARACTER SET = utf8mb3;
 
--- =====================================================
--- Tabela: feedbacks
--- Registra avaliacao do colaborador sobre a solucao/atendimento recebido.
--- Relacionamentos:
---   cada feedback pertence a uma solicitacao.
---   cada feedback pode estar associado a um usuario.
--- =====================================================
-CREATE TABLE feedbacks (
-  idfeedbacks INT NOT NULL AUTO_INCREMENT COMMENT 'Chave primaria do feedback.',
-  funcionou TINYINT(1) NOT NULL DEFAULT 0 COMMENT 'Booleano: 1 quando a solucao funcionou.',
-  nota INT NOT NULL DEFAULT 0 COMMENT 'Nota de satisfacao usada pela API.',
-  nota_satisfacao INT NULL DEFAULT NULL COMMENT 'Nota de satisfacao usada por cargas antigas.',
-  comentario TEXT NULL COMMENT 'Comentario livre do usuario.',
-  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT 'Data de criacao do registro.',
-  criado_em DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT 'Data de criacao usada por partes da API.',
-  atualizado_em DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT 'Data da ultima atualizacao.',
-  solicitacoes_idsolicitacoes INT NULL DEFAULT NULL COMMENT 'FK para a solicitacao avaliada.',
-  usuarios_idusuarios INT NULL DEFAULT NULL COMMENT 'FK para o usuario que enviou o feedback.',
-  PRIMARY KEY (idfeedbacks),
-  INDEX idx_feedbacks_solicitacoes (solicitacoes_idsolicitacoes),
-  INDEX idx_feedbacks_usuarios (usuarios_idusuarios),
-  INDEX idx_feedbacks_nota (nota),
-  -- Relacionamento feedbacks -> solicitacoes.
-  CONSTRAINT fk_feedbacks_solicitacoes
-    FOREIGN KEY (solicitacoes_idsolicitacoes)
-    REFERENCES solicitacoes (idsolicitacoes)
-    ON DELETE CASCADE
-    ON UPDATE CASCADE,
-  -- Relacionamento feedbacks -> usuarios.
-  CONSTRAINT fk_feedbacks_usuarios
-    FOREIGN KEY (usuarios_idusuarios)
-    REFERENCES usuarios (idusuarios)
-    ON DELETE SET NULL
-    ON UPDATE CASCADE
-) ENGINE=InnoDB
-  COMMENT='Feedbacks dos usuarios sobre solicitacoes e solucoes aplicadas.';
 
--- =====================================================
--- Tabela: arquivos
--- Armazena metadados de anexos vinculados a uma solicitacao.
--- Relacionamentos:
---   cada arquivo pertence a uma solicitacao.
---   cada arquivo pode estar associado ao usuario que fez o envio.
--- =====================================================
-CREATE TABLE arquivos (
-  idarquivos INT NOT NULL AUTO_INCREMENT COMMENT 'Chave primaria do arquivo.',
-  nome_original VARCHAR(255) NOT NULL DEFAULT '' COMMENT 'Nome original do arquivo enviado.',
-  caminho_arquivo VARCHAR(500) NOT NULL DEFAULT '' COMMENT 'Caminho ou chave de armazenamento do arquivo.',
-  mime_type VARCHAR(100) NOT NULL DEFAULT 'application/octet-stream' COMMENT 'Tipo MIME do arquivo.',
-  tamanho_bytes INT NOT NULL DEFAULT 0 COMMENT 'Tamanho do arquivo em bytes.',
-  url_arquivo VARCHAR(500) NULL DEFAULT NULL COMMENT 'URL publica ou interna usada por cargas antigas.',
-  tipo_arquivo VARCHAR(50) NULL DEFAULT NULL COMMENT 'Categoria simples do arquivo usada por cargas antigas.',
-  descricao VARCHAR(255) NULL DEFAULT NULL COMMENT 'Descricao opcional do anexo.',
-  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT 'Data de criacao do registro.',
-  criado_em DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT 'Data de criacao usada por partes da API.',
-  atualizado_em DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT 'Data da ultima atualizacao.',
-  solicitacoes_idsolicitacoes INT NULL DEFAULT NULL COMMENT 'FK para a solicitacao relacionada.',
-  usuarios_idusuarios INT NULL DEFAULT NULL COMMENT 'FK para o usuario que enviou o arquivo.',
-  PRIMARY KEY (idarquivos),
-  INDEX idx_arquivos_solicitacoes (solicitacoes_idsolicitacoes),
-  INDEX idx_arquivos_usuarios (usuarios_idusuarios),
-  INDEX idx_arquivos_mime_type (mime_type),
-  -- Relacionamento arquivos -> solicitacoes.
-  CONSTRAINT fk_arquivos_solicitacoes
-    FOREIGN KEY (solicitacoes_idsolicitacoes)
-    REFERENCES solicitacoes (idsolicitacoes)
-    ON DELETE CASCADE
-    ON UPDATE CASCADE,
-  -- Relacionamento arquivos -> usuarios.
-  CONSTRAINT fk_arquivos_usuarios
-    FOREIGN KEY (usuarios_idusuarios)
-    REFERENCES usuarios (idusuarios)
-    ON DELETE SET NULL
-    ON UPDATE CASCADE
-) ENGINE=InnoDB
-  COMMENT='Metadados de arquivos anexados as solicitacoes.';
+-- -----------------------------------------------------
+-- Table `acessia`.`solicitacoes`
+-- -----------------------------------------------------
+DROP TABLE IF EXISTS `acessia`.`solicitacoes` ;
 
--- =====================================================
--- Tabela: logs_ia
--- Guarda entrada, saida e metadados de classificacoes feitas pela IA.
--- Relacionamento:
---   cada log de IA pertence a uma solicitacao.
--- =====================================================
-CREATE TABLE logs_ia (
-  idlogs_ia INT NOT NULL AUTO_INCREMENT COMMENT 'Chave primaria do log de IA.',
-  entrada TEXT NULL COMMENT 'Texto ou payload enviado para a IA.',
-  saida JSON NULL COMMENT 'Resposta estruturada da IA em JSON.',
-  modelo VARCHAR(80) NOT NULL DEFAULT 'simulador_regras_v1' COMMENT 'Modelo ou estrategia usada pela IA.',
-  confianca DECIMAL(5,2) NOT NULL DEFAULT 0.00 COMMENT 'Confianca retornada pela IA, de 0.00 a 1.00.',
-  entrada_texto TEXT NULL COMMENT 'Entrada textual usada por cargas antigas.',
-  saida_classificacao TEXT NULL COMMENT 'Saida textual usada por cargas antigas.',
-  modelo_utilizado VARCHAR(80) NULL DEFAULT NULL COMMENT 'Nome do modelo usado por cargas antigas.',
-  tempo_resposta DECIMAL(8,3) NULL DEFAULT NULL COMMENT 'Tempo de resposta em segundos.',
-  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT 'Data de criacao do registro.',
-  criado_em DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT 'Data de criacao usada por partes da API.',
-  atualizado_em DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT 'Data da ultima atualizacao.',
-  solicitacoes_idsolicitacoes INT NULL DEFAULT NULL COMMENT 'FK para a solicitacao analisada pela IA.',
-  PRIMARY KEY (idlogs_ia),
-  INDEX idx_logs_ia_solicitacoes (solicitacoes_idsolicitacoes),
-  INDEX idx_logs_ia_modelo (modelo),
-  INDEX idx_logs_ia_created_at (created_at),
-  -- Relacionamento logs_ia -> solicitacoes.
-  CONSTRAINT fk_logs_ia_solicitacoes
-    FOREIGN KEY (solicitacoes_idsolicitacoes)
-    REFERENCES solicitacoes (idsolicitacoes)
-    ON DELETE CASCADE
-    ON UPDATE CASCADE
-) ENGINE=InnoDB
-  COMMENT='Logs de classificacoes e respostas de IA vinculados as solicitacoes.';
+CREATE TABLE IF NOT EXISTS `acessia`.`solicitacoes` (
+  `idsolicitacoes` INT NOT NULL AUTO_INCREMENT,
+  `canal` VARCHAR(20) NOT NULL,
+  `tipo_barreira` VARCHAR(30) NOT NULL,
+  `urgencia` VARCHAR(20) NOT NULL,
+  `area_responsavel` VARCHAR(100) NOT NULL,
+  `precisa_profissional` TINYINT NULL DEFAULT NULL,
+  `confianca_ia` DECIMAL(5,2) NULL DEFAULT NULL,
+  `classificacao_ia_json` JSON NOT NULL,
+  `atualizado_em` DATETIME NOT NULL,
+  `criado_em` DATETIME NOT NULL,
+  `descricao_dificuldade` TEXT NOT NULL,
+  `descricao_original` TEXT NOT NULL,
+  `contexto_problema` TEXT NULL,
+  `impacto_trabalho` TEXT NULL,
+  `preferencia_comunicacao` VARCHAR(100) NULL,
+  `apoio_imediato` TINYINT NULL,
+  `prioridade` VARCHAR(20) NULL,
+  `sla_resposta_horas` INT NULL,
+  `sla_resolucao_horas` INT NULL,
+  `data_primeira_resposta` DATETIME NOT NULL,
+  `data_resolucao` DATETIME NOT NULL,
+  `usuarios_idusuarios` INT NOT NULL,
+  PRIMARY KEY (`idsolicitacoes`),
+  INDEX `fk_solicitacoes_usuarios_idx` (`usuarios_idusuarios` ASC) VISIBLE,
+  CONSTRAINT `fk_solicitacoes_usuarios`
+    FOREIGN KEY (`usuarios_idusuarios`)
+    REFERENCES `acessia`.`usuarios` (`idusuarios`))
+ENGINE = InnoDB
+AUTO_INCREMENT = 11
+DEFAULT CHARACTER SET = utf8mb3;
 
--- =====================================================
--- Tabela: solucoes_has_solicitacoes
--- Tabela de relacionamento N:N entre solucoes e solicitacoes.
--- Relacionamentos:
---   uma solicitacao pode ter varias solucoes.
---   uma solucao pode atender varias solicitacoes.
--- =====================================================
-CREATE TABLE solucoes_has_solicitacoes (
-  idsolucoes_has_solicitacoes INT NOT NULL AUTO_INCREMENT COMMENT 'Chave primaria do vinculo.',
-  solucoes_idsolucoes INT NOT NULL COMMENT 'FK para solucoes.',
-  solicitacoes_idsolicitacoes INT NOT NULL COMMENT 'FK para solicitacoes.',
-  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT 'Data de criacao do vinculo.',
-  criado_em DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT 'Alias de criacao usado por partes da API.',
-  atualizado_em DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT 'Data da ultima atualizacao.',
-  PRIMARY KEY (idsolucoes_has_solicitacoes),
-  UNIQUE KEY uk_solucoes_has_solicitacoes (solucoes_idsolucoes, solicitacoes_idsolicitacoes),
-  INDEX idx_solucoes_has_solicitacoes_solucoes (solucoes_idsolucoes),
-  INDEX idx_solucoes_has_solicitacoes_solicitacoes (solicitacoes_idsolicitacoes),
-  -- Relacionamento solucoes_has_solicitacoes -> solucoes.
-  CONSTRAINT fk_shs_solucoes
-    FOREIGN KEY (solucoes_idsolucoes)
-    REFERENCES solucoes (idsolucoes)
-    ON DELETE CASCADE
-    ON UPDATE CASCADE,
-  -- Relacionamento solucoes_has_solicitacoes -> solicitacoes.
-  CONSTRAINT fk_shs_solicitacoes
-    FOREIGN KEY (solicitacoes_idsolicitacoes)
-    REFERENCES solicitacoes (idsolicitacoes)
-    ON DELETE CASCADE
-    ON UPDATE CASCADE
-) ENGINE=InnoDB
-  COMMENT='Relacionamento N:N entre solucoes cadastradas e solicitacoes abertas.';
 
--- =====================================================
--- Tabela: solucao_relacionada
--- Registra sugestoes ou solucoes relacionadas a uma solicitacao.
--- Relacionamentos:
---   cada registro conecta uma solicitacao a uma solucao recomendada/aplicada.
--- =====================================================
-CREATE TABLE solucao_relacionada (
-  idsolucao_relacionada INT NOT NULL AUTO_INCREMENT COMMENT 'Chave primaria da solucao relacionada.',
-  similaridade DECIMAL(5,2) NOT NULL DEFAULT 0.00 COMMENT 'Indice de similaridade entre solicitacao e solucao.',
-  aplicacao_solucao TINYINT(1) NOT NULL DEFAULT 0 COMMENT 'Booleano: 1 quando a solucao foi aplicada.',
-  foi_aplicada TINYINT(1) NOT NULL DEFAULT 0 COMMENT 'Alias legado para aplicacao da solucao.',
-  data_aplicacao DATETIME NULL DEFAULT NULL COMMENT 'Data em que a solucao foi aplicada.',
-  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT 'Data de criacao do registro.',
-  criado_em DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT 'Alias de criacao usado por partes da API.',
-  atualizado_em DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT 'Data da ultima atualizacao.',
-  solicitacoes_idsolicitacoes INT NULL DEFAULT NULL COMMENT 'FK para a solicitacao relacionada.',
-  solucoes_idsolucoes INT NULL DEFAULT NULL COMMENT 'FK para a solucao relacionada.',
-  PRIMARY KEY (idsolucao_relacionada),
-  UNIQUE KEY uk_solucao_relacionada (solicitacoes_idsolicitacoes, solucoes_idsolucoes),
-  INDEX idx_solucao_relacionada_solicitacoes (solicitacoes_idsolicitacoes),
-  INDEX idx_solucao_relacionada_solucoes (solucoes_idsolucoes),
-  INDEX idx_solucao_relacionada_similaridade (similaridade),
-  -- Relacionamento solucao_relacionada -> solicitacoes.
-  CONSTRAINT fk_solucao_relacionada_solicitacoes
-    FOREIGN KEY (solicitacoes_idsolicitacoes)
-    REFERENCES solicitacoes (idsolicitacoes)
-    ON DELETE CASCADE
-    ON UPDATE CASCADE,
-  -- Relacionamento solucao_relacionada -> solucoes.
-  CONSTRAINT fk_solucao_relacionada_solucoes
-    FOREIGN KEY (solucoes_idsolucoes)
-    REFERENCES solucoes (idsolucoes)
-    ON DELETE CASCADE
-    ON UPDATE CASCADE
-) ENGINE=InnoDB
-  COMMENT='Solucoes recomendadas ou aplicadas para solicitacoes especificas.';
+-- -----------------------------------------------------
+-- Table `acessia`.`arquivos`
+-- -----------------------------------------------------
+DROP TABLE IF EXISTS `acessia`.`arquivos` ;
+
+CREATE TABLE IF NOT EXISTS `acessia`.`arquivos` (
+  `idarquivos` INT NOT NULL AUTO_INCREMENT,
+  `url_arquivo` VARCHAR(255) NOT NULL,
+  `tipo_arquivo` VARCHAR(30) NOT NULL,
+  `descricao` VARCHAR(150) NULL DEFAULT NULL,
+  `created_at` DATETIME NOT NULL,
+  `solicitacoes_idsolicitacoes` INT NOT NULL,
+  PRIMARY KEY (`idarquivos`),
+  INDEX `fk_arquivos_solicitacoes1_idx` (`solicitacoes_idsolicitacoes` ASC) VISIBLE,
+  CONSTRAINT `fk_arquivos_solicitacoes1`
+    FOREIGN KEY (`solicitacoes_idsolicitacoes`)
+    REFERENCES `acessia`.`solicitacoes` (`idsolicitacoes`))
+ENGINE = InnoDB
+AUTO_INCREMENT = 11
+DEFAULT CHARACTER SET = utf8mb3;
+
+
+-- -----------------------------------------------------
+-- Table `acessia`.`encaminhamento`
+-- -----------------------------------------------------
+DROP TABLE IF EXISTS `acessia`.`encaminhamento` ;
+
+CREATE TABLE IF NOT EXISTS `acessia`.`encaminhamento` (
+  `idencaminhamento` INT NOT NULL AUTO_INCREMENT,
+  `setor_destino` VARCHAR(100) NOT NULL,
+  `profissional_responsavel` VARCHAR(100) NOT NULL,
+  `data_encaminhamento` DATETIME NOT NULL,
+  `observacao` TEXT NULL DEFAULT NULL,
+  `solicitacoes_idsolicitacoes` INT NOT NULL,
+  PRIMARY KEY (`idencaminhamento`),
+  INDEX `fk_encaminhamento_solicitacoes1_idx` (`solicitacoes_idsolicitacoes` ASC) VISIBLE,
+  CONSTRAINT `fk_encaminhamento_solicitacoes1`
+    FOREIGN KEY (`solicitacoes_idsolicitacoes`)
+    REFERENCES `acessia`.`solicitacoes` (`idsolicitacoes`))
+ENGINE = InnoDB
+AUTO_INCREMENT = 11
+DEFAULT CHARACTER SET = utf8mb3;
+
+
+-- -----------------------------------------------------
+-- Table `acessia`.`feedbacks`
+-- -----------------------------------------------------
+DROP TABLE IF EXISTS `acessia`.`feedbacks` ;
+
+CREATE TABLE IF NOT EXISTS `acessia`.`feedbacks` (
+  `idfeedbacks` INT NOT NULL AUTO_INCREMENT,
+  `funcionou` TINYINT NOT NULL,
+  `nota_satisfacao` INT NOT NULL,
+  `comentario` TEXT NULL DEFAULT NULL,
+  `created_at` DATETIME NOT NULL,
+  `solicitacoes_idsolicitacoes` INT NOT NULL,
+  PRIMARY KEY (`idfeedbacks`),
+  INDEX `fk_feedbacks_solicitacoes1_idx` (`solicitacoes_idsolicitacoes` ASC) VISIBLE,
+  CONSTRAINT `fk_feedbacks_solicitacoes1`
+    FOREIGN KEY (`solicitacoes_idsolicitacoes`)
+    REFERENCES `acessia`.`solicitacoes` (`idsolicitacoes`))
+ENGINE = InnoDB
+AUTO_INCREMENT = 11
+DEFAULT CHARACTER SET = utf8mb3;
+
+
+-- -----------------------------------------------------
+-- Table `acessia`.`logs_ia`
+-- -----------------------------------------------------
+DROP TABLE IF EXISTS `acessia`.`logs_ia` ;
+
+CREATE TABLE IF NOT EXISTS `acessia`.`logs_ia` (
+  `idlogs_ia` INT NOT NULL AUTO_INCREMENT,
+  `entrada_texto` TEXT NOT NULL,
+  `saida_classificacao` TEXT NOT NULL,
+  `modelo_utilizado` VARCHAR(50) NULL DEFAULT NULL,
+  `tempo_resposta` DECIMAL(6,2) NULL DEFAULT NULL,
+  `created_at` DATETIME NOT NULL,
+  `solicitacoes_idsolicitacoes` INT NOT NULL,
+  PRIMARY KEY (`idlogs_ia`),
+  INDEX `fk_logs_ia_solicitacoes1_idx` (`solicitacoes_idsolicitacoes` ASC) VISIBLE,
+  CONSTRAINT `fk_logs_ia_solicitacoes1`
+    FOREIGN KEY (`solicitacoes_idsolicitacoes`)
+    REFERENCES `acessia`.`solicitacoes` (`idsolicitacoes`))
+ENGINE = InnoDB
+AUTO_INCREMENT = 11
+DEFAULT CHARACTER SET = utf8mb3;
+
+
+-- -----------------------------------------------------
+-- Table `acessia`.`solucao_relacionada`
+-- -----------------------------------------------------
+DROP TABLE IF EXISTS `acessia`.`solucao_relacionada` ;
+
+CREATE TABLE IF NOT EXISTS `acessia`.`solucao_relacionada` (
+  `idsolucao_relacionada` INT NOT NULL AUTO_INCREMENT,
+  `similaridade` DECIMAL(5,2) NULL DEFAULT NULL,
+  `foi_aplicada` TINYINT NOT NULL,
+  `created_at` DATETIME NOT NULL,
+  PRIMARY KEY (`idsolucao_relacionada`))
+ENGINE = InnoDB
+AUTO_INCREMENT = 11
+DEFAULT CHARACTER SET = utf8mb3;
+
+
+-- -----------------------------------------------------
+-- Table `acessia`.`solucoes`
+-- -----------------------------------------------------
+DROP TABLE IF EXISTS `acessia`.`solucoes` ;
+
+CREATE TABLE IF NOT EXISTS `acessia`.`solucoes` (
+  `idsolucoes` INT NOT NULL AUTO_INCREMENT,
+  `solucao_provisoria` TEXT NOT NULL,
+  `contexto_problema` TEXT NOT NULL,
+  `urgencia` VARCHAR(20) NULL DEFAULT NULL,
+  `tipo_barreira` VARCHAR(30) NULL DEFAULT NULL,
+  `acao_recomendada` TEXT NULL DEFAULT NULL,
+  `area_responsavel` VARCHAR(100) NOT NULL,
+  `ativo` TINYINT NOT NULL,
+  `solucao_estrutural` TEXT NULL,
+  `custo_estimado` DECIMAL(10,2) NOT NULL,
+  `prazo_estimado_dias` INT NOT NULL,
+  PRIMARY KEY (`idsolucoes`))
+ENGINE = InnoDB
+AUTO_INCREMENT = 11
+DEFAULT CHARACTER SET = utf8mb3;
+
+
+-- -----------------------------------------------------
+-- Table `acessia`.`solucoes_has_solicitacoes`
+-- -----------------------------------------------------
+DROP TABLE IF EXISTS `acessia`.`solucoes_has_solicitacoes` ;
+
+CREATE TABLE IF NOT EXISTS `acessia`.`solucoes_has_solicitacoes` (
+  `solucoes_idsolucoes` INT NOT NULL,
+  `solicitacoes_idsolicitacoes` INT NOT NULL,
+  PRIMARY KEY (`solucoes_idsolucoes`, `solicitacoes_idsolicitacoes`),
+  INDEX `fk_solucoes_has_solicitacoes_solicitacoes1_idx` (`solicitacoes_idsolicitacoes` ASC) VISIBLE,
+  INDEX `fk_solucoes_has_solicitacoes_solucoes1_idx` (`solucoes_idsolucoes` ASC) VISIBLE,
+  CONSTRAINT `fk_solucoes_has_solicitacoes_solicitacoes1`
+    FOREIGN KEY (`solicitacoes_idsolicitacoes`)
+    REFERENCES `acessia`.`solicitacoes` (`idsolicitacoes`),
+  CONSTRAINT `fk_solucoes_has_solicitacoes_solucoes1`
+    FOREIGN KEY (`solucoes_idsolucoes`)
+    REFERENCES `acessia`.`solucoes` (`idsolucoes`))
+ENGINE = InnoDB
+DEFAULT CHARACTER SET = utf8mb3;
+
+
+-- -----------------------------------------------------
+-- Table `acessia`.`perfis_funcionais`
+-- -----------------------------------------------------
+DROP TABLE IF EXISTS `acessia`.`perfis_funcionais` ;
+
+CREATE TABLE IF NOT EXISTS `acessia`.`perfis_funcionais` (
+  `idperfis_funcionais` INT NOT NULL AUTO_INCREMENT,
+  `habilidades_profissionais` TEXT NULL,
+  `experiencias_anteriores` TEXT NULL,
+  `facilidades_no_ambiente` TEXT NULL,
+  `preferencias_de_comunicacao` TEXT NULL,
+  `dificuldades_encontradas` TEXT NULL,
+  `necessidades_de_adaptacao` TEXT NULL,
+  `barreiras_impactantes` TEXT NULL,
+  `tipo_de_apoio_necessario` TEXT NULL,
+  `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` DATETIME NOT NULL DEFAULT 'CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP',
+  PRIMARY KEY (`idperfis_funcionais`))
+ENGINE = InnoDB;
+
+
+-- -----------------------------------------------------
+-- Table `acessia`.`vagas`
+-- -----------------------------------------------------
+DROP TABLE IF EXISTS `acessia`.`vagas` ;
+
+CREATE TABLE IF NOT EXISTS `acessia`.`vagas` (
+  `idvagas` INT NOT NULL AUTO_INCREMENT,
+  `titulo` VARCHAR(150) NOT NULL,
+  `area` VARCHAR(150) NOT NULL,
+  `exigencias_do_cargo` TEXT NULL,
+  `rotina_da_funcao` TEXT NULL,
+  `ambiente_de_trabalho` TEXT NULL,
+  `ferramentas_utilizadas` TEXT NULL,
+  `barreiras_potenciais` TEXT NULL,
+  `possibilidade_de_adaptacao` TEXT NULL,
+  `ativo` TINYINT NULL DEFAULT 1,
+  `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` DATETIME NOT NULL DEFAULT 'CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP',
+  PRIMARY KEY (`idvagas`))
+ENGINE = InnoDB;
+
+
+-- -----------------------------------------------------
+-- Table `acessia`.`matches`
+-- -----------------------------------------------------
+DROP TABLE IF EXISTS `acessia`.`matches` ;
+
+CREATE TABLE IF NOT EXISTS `acessia`.`matches` (
+  `idmatches` INT NOT NULL AUTO_INCREMENT,
+  `pontuacao_compatibilidade` DECIMAL(5,2) NULL,
+  `areas_recomendadas` TEXT NULL,
+  `adaptacoes_recomendadas` TEXT NULL,
+  `riscos_incompatibilidade` TEXT NULL,
+  `justificativa` TEXT NULL,
+  `plano_inicial_acolhimento` TEXT NULL,
+  `created_at` DATETIME NULL DEFAULT CURRENT_TIMESTAMP,
+  `perfis_funcionais_idperfis_funcionais` INT NOT NULL,
+  `vagas_idvagas` INT NOT NULL,
+  PRIMARY KEY (`idmatches`),
+  INDEX `fk_matches_perfis_funcionais1_idx` (`perfis_funcionais_idperfis_funcionais` ASC) VISIBLE,
+  INDEX `fk_matches_vagas1_idx` (`vagas_idvagas` ASC) VISIBLE,
+  CONSTRAINT `fk_matches_perfis_funcionais1`
+    FOREIGN KEY (`perfis_funcionais_idperfis_funcionais`)
+    REFERENCES `acessia`.`perfis_funcionais` (`idperfis_funcionais`)
+    ON DELETE NO ACTION
+    ON UPDATE NO ACTION,
+  CONSTRAINT `fk_matches_vagas1`
+    FOREIGN KEY (`vagas_idvagas`)
+    REFERENCES `acessia`.`vagas` (`idvagas`)
+    ON DELETE NO ACTION
+    ON UPDATE NO ACTION)
+ENGINE = InnoDB;
+
+
+SET SQL_MODE=@OLD_SQL_MODE;
+SET FOREIGN_KEY_CHECKS=@OLD_FOREIGN_KEY_CHECKS;
+SET UNIQUE_CHECKS=@OLD_UNIQUE_CHECKS;

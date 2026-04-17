@@ -4,7 +4,9 @@ const { buildInsertQuery, pickDefined } = require("./queryHelpers");
 const TABLE = "feedbacks";
 const ID_COLUMN = "idfeedbacks";
 const CREATE_FIELDS = [
+  "funcionou",
   "nota",
+  "nota_satisfacao",
   "comentario",
   "criado_em",
   "solicitacoes_idsolicitacoes",

@@ -1,125 +1,25 @@
 # AcessIA API
 
-API REST da plataforma AcessIA, uma solucao para gestao de acessibilidade,
-inclusao e apoio a lideranca. A API permite registrar barreiras enfrentadas por
-colaboradores, organizar solicitacoes, indicar solucoes, registrar
-encaminhamentos, feedbacks, arquivos, logs de IA e indicadores para gestores e RH.
+API REST da plataforma AcessIA para acessibilidade, inclusao e performance
+organizacional. A API registra demandas vindas por app, web e totem, classifica
+barreiras, consulta solucoes validadas, apoia gestores/RH com indicadores e
+calcula match orientativo entre perfil funcional e vagas/cargos.
 
-## Tecnologias
+## Stack
 
 - Node.js
 - Express
 - MySQL
 - mysql2/promise
-- dotenv
-- cors
-- nodemon
+- SQL puro, sem ORM
 
-## Como rodar o projeto
-
-1. Crie o banco MySQL
-2. Execute o arquivo `database/schema.sql`
-3. Execute o arquivo `database/seed.sql`
-4. Configure o `.env`
-5. Rode `npm install`
-6. Rode `npm run dev`
-
-## Estrutura de pastas
-
-```txt
-acessia-api/
-  .env.example
-  .gitignore
-  package.json
-  README.md
-  src/
-    app.js
-    server.js
-    config/
-      db.js
-      env.js
-    controllers/
-      arquivosController.js
-      encaminhamentosController.js
-      feedbacksController.js
-      iaController.js
-      logsIaController.js
-      relatoriosController.js
-      solicitacoesController.js
-      solicitacoesRestController.js
-      solucaoRelacionadaController.js
-      solucoesController.js
-      solucoesRestController.js
-      solucoesSolicitacoesController.js
-      usuariosController.js
-      usuariosRestController.js
-    middlewares/
-      asyncHandler.js
-      errorHandler.js
-      notFound.js
-      validate.js
-    queries/
-      arquivosQueries.js
-      encaminhamentosQueries.js
-      feedbacksQueries.js
-      logsIaQueries.js
-      queryHelpers.js
-      relatoriosQueries.js
-      solicitacoesQueries.js
-      solucaoRelacionadaQueries.js
-      solucoesQueries.js
-      solucoesSolicitacoesQueries.js
-      usuariosQueries.js
-    routes/
-      arquivosRoutes.js
-      encaminhamentosRoutes.js
-      feedbacksRoutes.js
-      iaRoutes.js
-      index.js
-      logsIaRoutes.js
-      relatoriosRoutes.js
-      solicitacoesRoutes.js
-      solicitacoesRouters.js
-      solucaoRelacionadaRoutes.js
-      solucoesRoutes.js
-      solucoesSolicitacoesRoutes.js
-      usuariosRoutes.js
-    services/
-      arquivosService.js
-      encaminhamentosService.js
-      feedbacksService.js
-      iaService.js
-      logsIaService.js
-      relatoriosService.js
-      solicitacoesService.js
-      solucaoRelacionadaService.js
-      solucoesService.js
-      solucoesSolicitacoesService.js
-      usuariosService.js
-    utils/
-      AppError.js
-      normalize.js
-```
-
-## Instalacao
+## Como Rodar
 
 ```bash
 npm install
 ```
 
-Crie o arquivo `.env` a partir do exemplo:
-
-```bash
-cp .env.example .env
-```
-
-No Windows PowerShell:
-
-```powershell
-Copy-Item .env.example .env
-```
-
-Configure o banco no `.env`:
+Configure o `.env`:
 
 ```env
 PORT=3007
@@ -130,299 +30,109 @@ DB_PASSWORD=sua_senha
 DB_NAME=acessia
 ```
 
-## Execucao
+Crie o banco e dados iniciais:
 
-Ambiente de desenvolvimento:
+```bash
+mysql -u root -p < src/database/schema.sql
+mysql -u root -p acessia < src/database/seed.sql
+```
+
+Inicie a API:
 
 ```bash
 npm run dev
 ```
 
-Ambiente normal:
-
-```bash
-npm start
-```
-
-Base URL local:
+Base local:
 
 ```txt
 http://localhost:3007/api
 ```
 
-## Tabelas esperadas
+## Tipos Aceitos
 
-A API usa SQL direto com as tabelas ja existentes:
+Tipos de barreira:
 
-- usuarios
-- solicitacoes
-- solucoes
-- encaminhamento
-- feedbacks
-- arquivos
-- logs_ia
-- solucoes_has_solicitacoes
-- solucao_relacionada
+```txt
+comunicacao, mobilidade, sensorial, atitudinal, digital, organizacional
+```
 
-Os nomes de colunas seguem o padrao ja usado no projeto, por exemplo
-`idusuarios`, `idsolicitacoes`, `idsolucoes`,
-`usuarios_idusuarios`, `solicitacoes_idsolicitacoes` e
-`solucoes_idsolucoes`.
+Canais:
 
-Os arquivos `usuariosController.js`, `solicitacoesController.js`,
-`solucoesController.js` e `solicitacoesRouters.js` ficaram como stubs de
-compatibilidade para o esqueleto inicial. A implementacao nova esta nos arquivos
-`*RestController.js` e em `solicitacoesRoutes.js`.
+```txt
+app, web, totem
+```
 
-## Principais rotas
+Urgencias/prioridades:
+
+```txt
+baixa, media, alta, critica
+```
+
+Status de solicitacao:
+
+```txt
+aberta, em_triagem, em_andamento, encaminhada, resolvida, concluida, cancelada
+```
+
+## Rotas
 
 ### Usuarios
 
 ```txt
-POST   /api/usuarios
-GET    /api/usuarios
-GET    /api/usuarios/:id
-PUT    /api/usuarios/:id
-```
-
-Body para criar:
-
-```json
-{
-  "nome": "Ana Silva",
-  "email": "ana@empresa.com",
-  "tipo_usuario": "colaborador",
-  "unidade": "Sao Paulo",
-  "cargo": "Analista"
-}
-```
-
-Body para atualizar:
-
-```json
-{
-  "cargo": "Analista Senior",
-  "unidade": "Remoto"
-}
+POST /api/usuarios
+GET  /api/usuarios
+GET  /api/usuarios/:id
+PUT  /api/usuarios/:id
 ```
 
 ### Solicitacoes
 
 ```txt
-POST   /api/solicitacoes
-GET    /api/solicitacoes
-GET    /api/solicitacoes/:id
-PATCH  /api/solicitacoes/:id/status
-PATCH  /api/solicitacoes/:id/urgencia
-PATCH  /api/solicitacoes/:id/usuario
+POST  /api/solicitacoes
+GET   /api/solicitacoes
+GET   /api/solicitacoes/:id
+PUT   /api/solicitacoes/:id
+PATCH /api/solicitacoes/:id/status
+PATCH /api/solicitacoes/:id/urgencia
+PATCH /api/solicitacoes/:id/usuario
 ```
 
 Filtros:
 
 ```txt
-GET /api/solicitacoes?tipo_barreira=comunicacao
+GET /api/solicitacoes?canal=totem
+GET /api/solicitacoes?tipo_barreira=digital
 GET /api/solicitacoes?area_responsavel=RH
 GET /api/solicitacoes?status=aberta
-GET /api/solicitacoes?usuarios_idusuarios=1
 ```
 
-Body para criar:
+Body:
 
 ```json
 {
-  "canal": "painel_colaborador",
+  "usuarios_idusuarios": 1,
+  "canal": "web",
   "tipo_barreira": "comunicacao",
-  "urgencia": "media",
+  "dificuldade_encontrada": "Nao consigo acompanhar reunioes sem legenda.",
+  "contexto": "Reunioes semanais por video.",
+  "impacto_trabalho": "Perco decisoes e proximos passos.",
+  "urgencia": "alta",
+  "preferencia_comunicacao": "texto",
+  "necessidade_apoio_imediato": false,
   "area_responsavel": "Comunicacao interna",
   "status": "aberta",
-  "precisa_profissional": false,
-  "confianca_ia": 0.79,
   "classificacao_ia_json": {
-    "origem": "simulador_regras_v1",
-    "observacao": "Classificacao inicial"
-  },
-  "usuarios_idusuarios": 1
-}
-```
-
-Body para atualizar status:
-
-```json
-{
-  "status": "em_andamento"
-}
-```
-
-Body para classificar urgencia:
-
-```json
-{
-  "urgencia": "alta"
-}
-```
-
-Body para associar usuario:
-
-```json
-{
-  "usuarios_idusuarios": 2
-}
-```
-
-### Solucoes
-
-```txt
-POST   /api/solucoes
-GET    /api/solucoes
-GET    /api/solucoes/:id
-PUT    /api/solucoes/:id
-PATCH  /api/solucoes/:id/ativo
-```
-
-Filtros:
-
-```txt
-GET /api/solucoes?tipo_barreira=mobilidade
-GET /api/solucoes?ativo=1
-```
-
-Body para criar:
-
-```json
-{
-  "titulo": "Reunioes com legenda",
-  "descricao_problema": "Colaborador nao consegue acompanhar reunioes sem apoio visual.",
-  "solucao_imediata": "Ativar legenda automatica e enviar resumo por escrito.",
-  "tipo_barreira": "comunicacao",
-  "publico_indicado": "colaboradores com barreiras auditivas ou de processamento",
-  "area_responsavel": "Comunicacao interna",
-  "ativo": true
-}
-```
-
-Body para marcar ativa ou inativa:
-
-```json
-{
-  "ativo": false
-}
-```
-
-### Encaminhamentos
-
-```txt
-POST   /api/encaminhamentos
-GET    /api/encaminhamentos/solicitacao/:solicitacaoId
-PATCH  /api/encaminhamentos/:id
-```
-
-Body:
-
-```json
-{
-  "solicitacoes_idsolicitacoes": 1,
-  "profissional_responsavel": "Carla Mendes",
-  "observacao": "Encaminhar para avaliacao de ergonomia."
-}
-```
-
-### Feedbacks
-
-```txt
-POST   /api/feedbacks
-GET    /api/feedbacks/solicitacao/:solicitacaoId
-```
-
-Body:
-
-```json
-{
-  "solicitacoes_idsolicitacoes": 1,
-  "usuarios_idusuarios": 1,
-  "nota": 5,
-  "comentario": "A solucao ajudou nas reunioes semanais."
-}
-```
-
-### Arquivos
-
-```txt
-POST   /api/arquivos
-GET    /api/arquivos/solicitacao/:solicitacaoId
-```
-
-Body:
-
-```json
-{
-  "solicitacoes_idsolicitacoes": 1,
-  "usuarios_idusuarios": 1,
-  "nome_original": "evidencia-reuniao.pdf",
-  "caminho_arquivo": "/uploads/evidencia-reuniao.pdf",
-  "mime_type": "application/pdf",
-  "tamanho_bytes": 240000
-}
-```
-
-### Logs de IA
-
-```txt
-POST   /api/logs-ia
-GET    /api/logs-ia/solicitacao/:solicitacaoId
-```
-
-Body:
-
-```json
-{
-  "solicitacoes_idsolicitacoes": 1,
-  "entrada": "Nao consigo acompanhar reuniao sem legenda.",
-  "saida": {
     "tipo_barreira": "comunicacao",
-    "urgencia": "media"
-  },
-  "modelo": "simulador_regras_v1",
-  "confianca": 0.79
+    "prioridade": "alta"
+  }
 }
 ```
 
-### Vinculo entre solucoes e solicitacoes
+### Triagem Inteligente
 
 ```txt
-POST   /api/solucoes-solicitacoes
-GET    /api/solucoes-solicitacoes/solicitacao/:solicitacaoId
-```
-
-Body:
-
-```json
-{
-  "solucoes_idsolucoes": 1,
-  "solicitacoes_idsolicitacoes": 1
-}
-```
-
-### Solucao relacionada
-
-```txt
-POST   /api/solucao-relacionada
-GET    /api/solucao-relacionada/solicitacao/:solicitacaoId
-```
-
-Body:
-
-```json
-{
-  "solicitacoes_idsolicitacoes": 1,
-  "solucoes_idsolucoes": 1,
-  "similaridade": 0.88,
-  "aplicacao_solucao": true
-}
-```
-
-### Triagem inteligente simulada
-
-```txt
+POST /api/ia/classificar
 POST /api/ia/triagem
 ```
 
@@ -430,41 +140,12 @@ Body:
 
 ```json
 {
-  "texto": "Tenho dificuldade em reuniao porque nao ha legenda e o audio fica ruim."
-}
-```
-
-Resposta esperada:
-
-```json
-{
-  "tipo_barreira": "comunicacao",
-  "urgencia": "media",
-  "area_responsavel": "Comunicacao interna",
-  "precisa_profissional": false,
-  "confianca_ia": 0.79,
-  "classificacao_ia_json": {
-    "origem": "simulador_regras_v1",
-    "texto_analisado": "Tenho dificuldade em reuniao porque nao ha legenda e o audio fica ruim.",
-    "regras_consideradas": [],
-    "gerado_em": "2026-04-15T00:00:00.000Z"
+  "texto": "O portal nao funciona com leitor de tela e nao consigo registrar o ponto.",
+  "metadados": {
+    "canal": "app",
+    "urgencia": "alta"
   }
 }
-```
-
-Regras iniciais:
-
-- legenda, audio, reuniao: comunicacao
-- escada, rampa, locomocao: mobilidade
-- barulho, luz, sobrecarga: sensorial
-- instrucoes, texto longo, organizacao: cognitiva_organizacional
-- sistema, site, leitor de tela, contraste: acesso_digital
-- preconceito, piada, constrangimento: atitudinal
-
-### Relatorios e indicadores
-
-```txt
-GET /api/relatorios/indicadores
 ```
 
 Resposta:
@@ -473,17 +154,212 @@ Resposta:
 {
   "sucesso": true,
   "dados": {
-    "total_solicitacoes": 10,
-    "solicitacoes_por_status": [],
-    "solicitacoes_por_barreira": [],
-    "solicitacoes_por_area": [],
-    "solucoes_ativas": 8,
-    "solucoes_inativas": 2
+    "tipo_barreira": "digital",
+    "prioridade": "alta",
+    "area_responsavel": "Tecnologia da informacao",
+    "precisa_profissional": false,
+    "confianca_ia": 0.65,
+    "acao_imediata_sugerida": "Disponibilizar canal alternativo acessivel enquanto o sistema e avaliado por tecnologia.",
+    "classificacao_ia_json": {}
   }
 }
 ```
 
-## Padrao de resposta
+### Solucoes
+
+```txt
+POST  /api/solucoes
+GET   /api/solucoes
+GET   /api/solucoes/:id
+PUT   /api/solucoes/:id
+PATCH /api/solucoes/:id/ativo
+POST  /api/solucoes-solicitacoes
+GET   /api/solucoes-solicitacoes/solicitacao/:solicitacaoId
+```
+
+Filtros:
+
+```txt
+GET /api/solucoes?tipo_barreira=mobilidade
+GET /api/solucoes?area_responsavel=Facilities
+GET /api/solucoes?ativo=1
+```
+
+Body:
+
+```json
+{
+  "titulo": "Reunioes acessiveis",
+  "tipo_barreira": "comunicacao",
+  "contexto_problema": "Pessoa nao acompanha reunioes sem apoio textual.",
+  "acao_recomendada": "Ativar legenda, enviar pauta e registrar decisoes.",
+  "area_responsavel": "Comunicacao interna",
+  "urgencia": "media",
+  "solucao_provisoria": "Ativar legenda automatica na proxima reuniao.",
+  "solucao_estrutural": "Criar padrao corporativo de reunioes acessiveis.",
+  "ativo": true
+}
+```
+
+Vinculo com solicitacao:
+
+```json
+{
+  "solucoes_idsolucoes": 1,
+  "solicitacoes_idsolicitacoes": 1
+}
+```
+
+### Dashboard Gestor/RH
+
+```txt
+GET /api/dashboard
+GET /api/dashboard/indicadores
+GET /api/relatorios/indicadores
+```
+
+Retorna:
+
+```txt
+total_demandas_abertas
+total_por_status
+total_por_tipo_barreira
+tempo_medio_resposta_horas
+tempo_medio_resolucao_horas
+percentual_resolvido
+reincidencia_por_barreira
+satisfacao_media
+gargalos_por_area
+```
+
+### Perfis Funcionais
+
+```txt
+POST /api/perfis-funcionais
+GET  /api/perfis-funcionais
+GET  /api/perfis-funcionais/:id
+PUT  /api/perfis-funcionais/:id
+```
+
+Body:
+
+```json
+{
+  "usuarios_idusuarios": 1,
+  "identificador": "Perfil Ana Souza",
+  "habilidades_profissionais": ["analise de dados", "organizacao", "atendimento"],
+  "experiencias_anteriores": "Assistente administrativa por 3 anos.",
+  "facilidades_no_ambiente": ["rotina previsivel", "comunicacao escrita"],
+  "dificuldades_encontradas": ["reuniao sem legenda", "mudanca repentina"],
+  "preferencias_de_comunicacao": "texto e email",
+  "necessidades_de_adaptacao": ["legenda", "pauta previa"],
+  "barreiras_que_impactam_o_desempenho": ["comunicacao", "organizacional"],
+  "tipo_de_apoio_necessario": "apoio do gestor"
+}
+```
+
+### Vagas/Cargos/Areas
+
+```txt
+POST /api/vagas
+GET  /api/vagas
+GET  /api/vagas/:id
+PUT  /api/vagas/:id
+```
+
+Body:
+
+```json
+{
+  "titulo": "Analista Administrativo",
+  "area": "Administrativo",
+  "exigencias_do_cargo": ["organizacao", "planilhas", "atendimento interno"],
+  "rotina_da_funcao": "Rotina com prazos, reunioes semanais e documentos.",
+  "ambiente_de_trabalho": "Escritorio hibrido com reunioes online.",
+  "ferramentas_utilizadas": ["planilhas", "portal interno", "email"],
+  "barreiras_potenciais": ["comunicacao", "digital", "organizacional"],
+  "possibilidade_de_adaptacao": "alta: permite pauta previa e canais escritos"
+}
+```
+
+### Match Inteligente
+
+```txt
+POST /api/match/avaliar
+GET  /api/match/:id
+```
+
+Body com IDs:
+
+```json
+{
+  "perfil_funcional_id": 1,
+  "vaga_ids": [1, 2, 3]
+}
+```
+
+Body com objetos embutidos:
+
+```json
+{
+  "perfil_funcional": {
+    "habilidades_profissionais": ["organizacao", "planilhas"],
+    "dificuldades_encontradas": ["reuniao sem legenda"],
+    "preferencias_de_comunicacao": "email",
+    "necessidades_de_adaptacao": ["legenda"],
+    "barreiras_que_impactam_o_desempenho": ["comunicacao"]
+  },
+  "vagas": [
+    {
+      "titulo": "Assistente de RH",
+      "area": "RH",
+      "exigencias_do_cargo": ["organizacao", "comunicacao escrita"],
+      "rotina_da_funcao": "Triagem de demandas e reunioes online.",
+      "ambiente_de_trabalho": "Administrativo hibrido.",
+      "ferramentas_utilizadas": ["email", "planilhas"],
+      "barreiras_potenciais": ["comunicacao", "organizacional"],
+      "possibilidade_de_adaptacao": "alta"
+    }
+  ]
+}
+```
+
+Resposta inclui:
+
+```txt
+areas_com_maior_compatibilidade
+cargos_com_menor_incidencia_de_barreiras
+adaptacoes_recomendadas
+riscos_de_incompatibilidade
+justificativa
+plano_inicial_de_acolhimento
+ranking_compatibilidade
+```
+
+O match e apenas orientativo e nao deve excluir automaticamente uma pessoa de
+nenhuma vaga.
+
+### Demais Modulos Existentes
+
+```txt
+POST /api/encaminhamentos
+GET  /api/encaminhamentos/solicitacao/:solicitacaoId
+PATCH /api/encaminhamentos/:id
+
+POST /api/feedbacks
+GET  /api/feedbacks/solicitacao/:solicitacaoId
+
+POST /api/arquivos
+GET  /api/arquivos/solicitacao/:solicitacaoId
+
+POST /api/logs-ia
+GET  /api/logs-ia/solicitacao/:solicitacaoId
+
+POST /api/solucao-relacionada
+GET  /api/solucao-relacionada/solicitacao/:solicitacaoId
+```
+
+## Padrao de Resposta
 
 Sucesso:
 
@@ -508,11 +384,3 @@ Erro:
   }
 }
 ```
-
-## Observacoes para evolucao com IA real
-
-A camada `src/services/iaService.js` concentra a triagem simulada. Para integrar
-um provedor de IA futuramente, substitua ou complemente esse service mantendo o
-contrato da rota `POST /api/ia/triagem`. Os logs podem ser persistidos em
-`logs_ia` pela rota `POST /api/logs-ia`.
-

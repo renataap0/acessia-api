@@ -20,6 +20,15 @@ const criarSolicitacao = asyncHandler(async (req, res) => {
   });
 });
 
+const atualizarSolicitacao = asyncHandler(async (req, res) => {
+  const solicitacao = await solicitacoesService.atualizarSolicitacao(req.params.id, req.body);
+  res.json({
+    sucesso: true,
+    mensagem: "Solicitacao atualizada com sucesso.",
+    dados: solicitacao
+  });
+});
+
 const atualizarStatus = asyncHandler(async (req, res) => {
   const solicitacao = await solicitacoesService.atualizarStatus(req.params.id, req.body.status);
   res.json({
@@ -53,6 +62,7 @@ const associarUsuario = asyncHandler(async (req, res) => {
 
 module.exports = {
   associarUsuario,
+  atualizarSolicitacao,
   atualizarStatus,
   buscarSolicitacaoPorId,
   classificarUrgencia,

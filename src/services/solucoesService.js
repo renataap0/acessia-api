@@ -1,16 +1,40 @@
 const solucoesQueries = require("../queries/solucoesQueries");
 const AppError = require("../utils/AppError");
+const { TIPOS_BARREIRA, URGENCIAS } = require("../utils/domain");
 const { toTinyInt } = require("../utils/normalize");
 
-const normalizeCreatePayload = (payload) => ({
-  ...payload,
-  ativo: payload.ativo === undefined ? 1 : toTinyInt(payload.ativo)
-});
+const assertAllowed = (field, value, allowedValues) => {
+  if (value !== undefined && value !== null && value !== "" && !allowedValues.includes(value)) {
+    throw new AppError(`Valor invalido para ${field}.`, 400, {
+      campo: field,
+      valores_permitidos: allowedValues
+    });
+  }
+};
 
-const normalizeUpdatePayload = (payload) => ({
-  ...payload,
-  ativo: payload.ativo === undefined ? undefined : toTinyInt(payload.ativo)
-});
+const normalizePayload = (payload, isCreate = false) => {
+  const contextoProblema = payload.contexto_problema || payload.descricao_problema;
+  const solucaoProvisoria = payload.solucao_provisoria || payload.solucao_imediata;
+  const acaoRecomendada = payload.acao_recomendada || solucaoProvisoria;
+
+  return {
+    ...payload,
+    contexto_problema: contextoProblema,
+    descricao_problema: payload.descricao_problema || contextoProblema,
+    acao_recomendada: acaoRecomendada,
+    solucao_provisoria: solucaoProvisoria,
+    solucao_imediata: payload.solucao_imediata || solucaoProvisoria,
+    urgencia: payload.urgencia || (isCreate ? "media" : undefined),
+    ativo: payload.ativo === undefined
+      ? (isCreate ? 1 : undefined)
+      : toTinyInt(payload.ativo)
+  };
+};
+
+const validatePayload = (payload) => {
+  assertAllowed("tipo_barreira", payload.tipo_barreira, TIPOS_BARREIRA);
+  assertAllowed("urgencia", payload.urgencia, URGENCIAS);
+};
 
 const listarSolucoes = (filters) => {
   return solucoesQueries.listar({
@@ -30,11 +54,15 @@ const buscarSolucaoPorId = async (id) => {
 };
 
 const criarSolucao = async (payload) => {
-  return solucoesQueries.criar(normalizeCreatePayload(payload));
+  const normalizedPayload = normalizePayload(payload, true);
+  validatePayload(normalizedPayload);
+  return solucoesQueries.criar(normalizedPayload);
 };
 
 const atualizarSolucao = async (id, payload) => {
-  const affectedRows = await solucoesQueries.atualizar(id, normalizeUpdatePayload(payload));
+  const normalizedPayload = normalizePayload(payload);
+  validatePayload(normalizedPayload);
+  const affectedRows = await solucoesQueries.atualizar(id, normalizedPayload);
 
   if (affectedRows === 0) {
     throw new AppError("Solucao nao encontrada.", 404);

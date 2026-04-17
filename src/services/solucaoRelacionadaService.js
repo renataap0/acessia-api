@@ -5,6 +5,7 @@ const salvarSolucaoRelacionada = async (payload) => {
   return solucaoRelacionadaQueries.criar({
     ...payload,
     aplicacao_solucao: toTinyInt(payload.aplicacao_solucao),
+    foi_aplicada: toTinyInt(payload.foi_aplicada ?? payload.aplicacao_solucao),
     data_aplicacao: normalizeDate(payload.data_aplicacao)
   });
 };

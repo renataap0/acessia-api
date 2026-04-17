@@ -6,48 +6,27 @@ const {
   pickDefined
 } = require("./queryHelpers");
 
-const TABLE = "solucoes";
-const ID_COLUMN = "idsolucoes";
-const CREATE_FIELDS = [
+const TABLE = "vagas";
+const ID_COLUMN = "idvagas";
+const FIELDS = [
   "titulo",
-  "tipo_barreira",
-  "contexto_problema",
-  "acao_recomendada",
-  "area_responsavel",
-  "urgencia",
-  "solucao_provisoria",
-  "solucao_estrutural",
-  "descricao_problema",
-  "solucao_imediata",
-  "publico_indicado",
-  "ativo"
-];
-const UPDATE_FIELDS = [
-  "titulo",
-  "tipo_barreira",
-  "contexto_problema",
-  "acao_recomendada",
-  "area_responsavel",
-  "urgencia",
-  "solucao_provisoria",
-  "solucao_estrutural",
-  "descricao_problema",
-  "solucao_imediata",
-  "publico_indicado",
+  "area",
+  "exigencias_do_cargo",
+  "rotina_da_funcao",
+  "ambiente_de_trabalho",
+  "ferramentas_utilizadas",
+  "barreiras_potenciais",
+  "possibilidade_de_adaptacao",
   "ativo"
 ];
 
 const listar = async (filters = {}) => {
-  const where = buildWhereClause(pickDefined(filters, [
-    "tipo_barreira",
-    "area_responsavel",
-    "urgencia",
-    "ativo"
-  ]));
+  const where = buildWhereClause(pickDefined(filters, ["area", "ativo"]));
   const [rows] = await db.query(
     `SELECT * FROM ${TABLE}${where.clause} ORDER BY ${ID_COLUMN} DESC`,
     where.values
   );
+
   return rows;
 };
 
@@ -56,15 +35,29 @@ const buscarPorId = async (id) => {
   return rows[0] || null;
 };
 
+const buscarPorIds = async (ids) => {
+  if (!ids.length) {
+    return [];
+  }
+
+  const placeholders = ids.map(() => "?").join(", ");
+  const [rows] = await db.query(
+    `SELECT * FROM ${TABLE} WHERE ${ID_COLUMN} IN (${placeholders}) ORDER BY ${ID_COLUMN} DESC`,
+    ids
+  );
+
+  return rows;
+};
+
 const criar = async (payload) => {
-  const data = pickDefined(payload, CREATE_FIELDS);
+  const data = pickDefined(payload, FIELDS);
   const { sql, values } = buildInsertQuery(TABLE, data);
   const [result] = await db.query(sql, values);
   return result.insertId;
 };
 
 const atualizar = async (id, payload) => {
-  const data = pickDefined(payload, UPDATE_FIELDS);
+  const data = pickDefined(payload, FIELDS);
   const { sql, values } = buildUpdateQuery(TABLE, ID_COLUMN, id, data);
   const [result] = await db.query(sql, values);
   return result.affectedRows;
@@ -73,6 +66,7 @@ const atualizar = async (id, payload) => {
 module.exports = {
   atualizar,
   buscarPorId,
+  buscarPorIds,
   criar,
   listar
 };

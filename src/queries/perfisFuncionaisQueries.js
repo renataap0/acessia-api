@@ -6,48 +6,29 @@ const {
   pickDefined
 } = require("./queryHelpers");
 
-const TABLE = "solucoes";
-const ID_COLUMN = "idsolucoes";
-const CREATE_FIELDS = [
-  "titulo",
-  "tipo_barreira",
-  "contexto_problema",
-  "acao_recomendada",
-  "area_responsavel",
-  "urgencia",
-  "solucao_provisoria",
-  "solucao_estrutural",
-  "descricao_problema",
-  "solucao_imediata",
-  "publico_indicado",
-  "ativo"
-];
-const UPDATE_FIELDS = [
-  "titulo",
-  "tipo_barreira",
-  "contexto_problema",
-  "acao_recomendada",
-  "area_responsavel",
-  "urgencia",
-  "solucao_provisoria",
-  "solucao_estrutural",
-  "descricao_problema",
-  "solucao_imediata",
-  "publico_indicado",
+const TABLE = "perfis_funcionais";
+const ID_COLUMN = "idperfis_funcionais";
+const FIELDS = [
+  "usuarios_idusuarios",
+  "identificador",
+  "habilidades_profissionais",
+  "experiencias_anteriores",
+  "facilidades_no_ambiente",
+  "dificuldades_encontradas",
+  "preferencias_de_comunicacao",
+  "necessidades_de_adaptacao",
+  "barreiras_que_impactam_o_desempenho",
+  "tipo_de_apoio_necessario",
   "ativo"
 ];
 
 const listar = async (filters = {}) => {
-  const where = buildWhereClause(pickDefined(filters, [
-    "tipo_barreira",
-    "area_responsavel",
-    "urgencia",
-    "ativo"
-  ]));
+  const where = buildWhereClause(pickDefined(filters, ["usuarios_idusuarios", "ativo"]));
   const [rows] = await db.query(
     `SELECT * FROM ${TABLE}${where.clause} ORDER BY ${ID_COLUMN} DESC`,
     where.values
   );
+
   return rows;
 };
 
@@ -57,14 +38,14 @@ const buscarPorId = async (id) => {
 };
 
 const criar = async (payload) => {
-  const data = pickDefined(payload, CREATE_FIELDS);
+  const data = pickDefined(payload, FIELDS);
   const { sql, values } = buildInsertQuery(TABLE, data);
   const [result] = await db.query(sql, values);
   return result.insertId;
 };
 
 const atualizar = async (id, payload) => {
-  const data = pickDefined(payload, UPDATE_FIELDS);
+  const data = pickDefined(payload, FIELDS);
   const { sql, values } = buildUpdateQuery(TABLE, ID_COLUMN, id, data);
   const [result] = await db.query(sql, values);
   return result.affectedRows;
