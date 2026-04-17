@@ -17,20 +17,31 @@ router.get("/", listarSolucoes);
 router.get("/:id", validateIdParam(), buscarSolucaoPorId);
 router.post(
   "/",
-  validateRequiredFields(["titulo", "solucao_imediata", "tipo_barreira"]),
+  validateRequiredFields([
+    "solucao_provisoria",
+    "contexto_problema",
+    "tipo_barreira",
+    "acao_recomendada",
+    "area_responsavel",
+    "custo_estimado",
+    "prazo_estimado_dias"
+  ]),
   criarSolucao
 );
 router.put(
   "/:id",
   validateIdParam(),
   validateAtLeastOneField([
-    "titulo",
-    "descricao_problema",
-    "solucao_imediata",
+    "solucao_provisoria",
+    "contexto_problema",
+    "urgencia",
     "tipo_barreira",
-    "publico_indicado",
+    "acao_recomendada",
     "area_responsavel",
-    "ativo"
+    "ativo",
+    "solucao_estrutural",
+    "custo_estimado",
+    "prazo_estimado_dias"
   ]),
   atualizarSolucao
 );

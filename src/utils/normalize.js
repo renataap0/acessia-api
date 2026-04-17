@@ -22,10 +22,23 @@ const toJsonString = (value) => {
   return JSON.stringify(value);
 };
 
+const toTextValue = (value) => {
+  if (value === undefined || value === null) {
+    return value;
+  }
+
+  if (Array.isArray(value) || typeof value === "object") {
+    return JSON.stringify(value);
+  }
+
+  return String(value);
+};
+
 const normalizeDate = (value) => value || new Date();
 
 module.exports = {
   normalizeDate,
   toJsonString,
+  toTextValue,
   toTinyInt
 };

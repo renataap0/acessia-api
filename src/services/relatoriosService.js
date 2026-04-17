@@ -1,7 +1,7 @@
-const relatoriosQueries = require("../queries/relatoriosQueries");
+const dashboardService = require("./dashboardService");
 
 const buscarIndicadoresGerais = () => {
-  return relatoriosQueries.indicadoresGerais();
+  return dashboardService.buscarIndicadores();
 };
 
 module.exports = {

@@ -1,9 +1,4 @@
-const normalizeText = (text) => {
-  return String(text || "")
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .toLowerCase();
-};
+const { normalizeSearchText } = require("../utils/domain");
 
 // Regras simples para simular uma futura triagem por IA real.
 const ruleSets = [
@@ -11,63 +6,78 @@ const ruleSets = [
     tipo_barreira: "comunicacao",
     area_responsavel: "Comunicacao interna",
     precisa_profissional: false,
-    palavras: ["legenda", "audio", "reuniao", "reunioes", "libras", "telefone"]
+    acao_imediata_sugerida: "Garantir comunicacao em formato acessivel, como legenda, texto ou resumo por escrito.",
+    palavras: ["legenda", "audio", "reuniao", "telefone"]
   },
   {
     tipo_barreira: "mobilidade",
     area_responsavel: "Facilities",
     precisa_profissional: true,
-    palavras: ["escada", "rampa", "locomocao", "cadeira de rodas", "elevador", "acesso"]
+    acao_imediata_sugerida: "Liberar rota acessivel temporaria e remover bloqueios de circulacao.",
+    palavras: ["escada", "rampa", "locomocao", "deslocamento"]
   },
   {
     tipo_barreira: "sensorial",
     area_responsavel: "RH e saude ocupacional",
     precisa_profissional: true,
-    palavras: ["barulho", "luz", "sobrecarga", "sensorial", "ruido", "cheiro"]
+    acao_imediata_sugerida: "Reduzir estimulos do ambiente e oferecer alternativa de posto, pausa ou equipamento de apoio.",
+    palavras: ["barulho", "luz", "sobrecarga", "ruido"]
   },
   {
-    tipo_barreira: "cognitiva_organizacional",
+    tipo_barreira: "digital",
+    area_responsavel: "Tecnologia da informacao",
+    precisa_profissional: false,
+    acao_imediata_sugerida: "Disponibilizar canal alternativo acessivel enquanto o sistema e avaliado por tecnologia.",
+    palavras: ["sistema", "portal", "acesso", "site"]
+  },
+  {
+    tipo_barreira: "organizacional",
     area_responsavel: "Gestao e RH",
     precisa_profissional: false,
-    palavras: ["instrucoes", "texto longo", "organizacao", "rotina", "prazo", "tarefas"]
+    acao_imediata_sugerida: "Registrar instrucoes por escrito, definir prioridade e alinhar responsaveis.",
+    palavras: ["instrucoes", "rotina", "organizacao", "ambiguidade"]
   },
   {
     tipo_barreira: "atitudinal",
     area_responsavel: "RH",
-    precisa_profissional: false,
-    palavras: ["preconceito", "piada", "constrangimento", "exclusao", "tratamento"]
-  },
-  {
-    tipo_barreira: "acesso_digital",
-    area_responsavel: "Tecnologia da informacao",
-    precisa_profissional: false,
-    palavras: ["sistema", "site", "aplicativo", "leitor de tela", "contraste", "digital"]
+    precisa_profissional: true,
+    acao_imediata_sugerida: "Acolher o relato, proteger a pessoa afetada e acionar RH para apuracao humanizada.",
+    palavras: ["desrespeito", "preconceito", "capacitismo", "tratamento"]
   }
 ];
 
-const urgencyWords = {
-  alta: ["urgente", "risco", "dor", "acidente", "nao consigo", "impossivel"],
-  media: ["dificuldade", "atrapalha", "limitacao", "frequente", "problema"]
+const priorityWords = {
+  critica: ["risco", "acidente", "assedio", "humilhacao", "imediato", "critico"],
+  alta: ["urgente", "dor", "nao consigo", "impossivel", "impede", "bloqueia"],
+  media: ["dificuldade", "atrapalha", "frequente", "sobrecarga", "prejudica"]
 };
 
-const countMatches = (text, words) => {
-  return words.filter((word) => text.includes(word)).length;
-};
+const countMatches = (text, words) => words.filter((word) => text.includes(word)).length;
 
-const inferUrgency = (text) => {
-  if (countMatches(text, urgencyWords.alta) > 0) {
+const inferPriority = (text, metadata = {}) => {
+  const urgenciaInformada = normalizeSearchText(metadata.urgencia || metadata.prioridade);
+
+  if (["critica", "alta", "media", "baixa"].includes(urgenciaInformada)) {
+    return urgenciaInformada;
+  }
+
+  if (countMatches(text, priorityWords.critica) > 0) {
+    return "critica";
+  }
+
+  if (countMatches(text, priorityWords.alta) > 0) {
     return "alta";
   }
 
-  if (countMatches(text, urgencyWords.media) > 0) {
+  if (countMatches(text, priorityWords.media) > 0) {
     return "media";
   }
 
   return "baixa";
 };
 
-const classificarTriagem = (texto) => {
-  const normalizedText = normalizeText(texto);
+const classificarTexto = (texto, metadados = {}) => {
+  const normalizedText = normalizeSearchText(`${texto || ""} ${JSON.stringify(metadados || {})}`);
   const matches = ruleSets
     .map((rule) => ({
       ...rule,
@@ -78,36 +88,51 @@ const classificarTriagem = (texto) => {
   const bestMatch = matches[0].pontuacao > 0
     ? matches[0]
     : {
-      tipo_barreira: "nao_classificada",
-      area_responsavel: "RH",
+      tipo_barreira: "organizacional",
+      area_responsavel: "Gestao e RH",
       precisa_profissional: false,
+      acao_imediata_sugerida: "Encaminhar para triagem humana e coletar mais contexto antes da decisao.",
       pontuacao: 0,
       palavras: []
     };
 
-  const confianca = Math.min(0.95, Number((0.55 + bestMatch.pontuacao * 0.12).toFixed(2)));
-  const urgencia = inferUrgency(normalizedText);
+  const prioridade = inferPriority(normalizedText, metadados);
+  const confianca = Math.min(0.95, Number((0.50 + bestMatch.pontuacao * 0.15).toFixed(2)));
 
-  const classificacao = {
+  const classificacaoIaJson = {
     origem: "simulador_regras_v1",
     texto_analisado: texto,
+    metadados_considerados: metadados || {},
     regras_consideradas: matches.map((match) => ({
       tipo_barreira: match.tipo_barreira,
       pontuacao: match.pontuacao
     })),
+    observacao: "Triagem orientativa. A decisao final deve ser humana.",
     gerado_em: new Date().toISOString()
   };
 
   return {
     tipo_barreira: bestMatch.tipo_barreira,
-    urgencia,
+    prioridade,
     area_responsavel: bestMatch.area_responsavel,
     precisa_profissional: bestMatch.precisa_profissional,
     confianca_ia: confianca,
-    classificacao_ia_json: classificacao
+    acao_imediata: bestMatch.acao_imediata_sugerida,
+    acao_imediata_sugerida: bestMatch.acao_imediata_sugerida,
+    classificacao_ia_json: classificacaoIaJson
+  };
+};
+
+const classificarTriagem = (texto, metadados = {}) => {
+  const classificacao = classificarTexto(texto, metadados);
+
+  return {
+    ...classificacao,
+    urgencia: classificacao.prioridade
   };
 };
 
 module.exports = {
+  classificarTexto,
   classificarTriagem
 };
