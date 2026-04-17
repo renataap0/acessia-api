@@ -9,21 +9,20 @@ const {
 const TABLE = "perfis_funcionais";
 const ID_COLUMN = "idperfis_funcionais";
 const FIELDS = [
-  "usuarios_idusuarios",
-  "identificador",
   "habilidades_profissionais",
   "experiencias_anteriores",
   "facilidades_no_ambiente",
-  "dificuldades_encontradas",
   "preferencias_de_comunicacao",
+  "dificuldades_encontradas",
   "necessidades_de_adaptacao",
-  "barreiras_que_impactam_o_desempenho",
+  "barreiras_impactantes",
   "tipo_de_apoio_necessario",
-  "ativo"
+  "created_at",
+  "updated_at"
 ];
 
 const listar = async (filters = {}) => {
-  const where = buildWhereClause(pickDefined(filters, ["usuarios_idusuarios", "ativo"]));
+  const where = buildWhereClause(pickDefined(filters, []));
   const [rows] = await db.query(
     `SELECT * FROM ${TABLE}${where.clause} ORDER BY ${ID_COLUMN} DESC`,
     where.values

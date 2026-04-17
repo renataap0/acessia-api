@@ -12,11 +12,11 @@ const buscarSolicitacaoPorId = asyncHandler(async (req, res) => {
 });
 
 const criarSolicitacao = asyncHandler(async (req, res) => {
-  const id = await solicitacoesService.criarSolicitacao(req.body);
+  const solicitacaoCriada = await solicitacoesService.criarSolicitacao(req.body);
   res.status(201).json({
     sucesso: true,
     mensagem: "Solicitacao criada com sucesso.",
-    dados: { id }
+    dados: solicitacaoCriada
   });
 });
 

@@ -1,71 +1,34 @@
 const matchQueries = require("../queries/matchQueries");
+const logsIaService = require("./logsIaService");
 const perfisFuncionaisService = require("./perfisFuncionaisService");
 const vagasService = require("./vagasService");
 const AppError = require("../utils/AppError");
-const { TIPOS_BARREIRA, normalizeSearchText } = require("../utils/domain");
+const { normalizeSearchText } = require("../utils/domain");
 
 const STOPWORDS = new Set([
-  "para",
-  "com",
-  "sem",
-  "por",
-  "das",
-  "dos",
-  "uma",
-  "que",
-  "de",
-  "da",
-  "do",
-  "em",
-  "as",
-  "os",
-  "ao",
-  "ou",
-  "e"
+  "para", "com", "sem", "por", "das", "dos", "uma", "que",
+  "de", "da", "do", "em", "as", "os", "ao", "ou", "e"
 ]);
 
-const barrierKeywords = {
-  comunicacao: ["comunicacao", "legenda", "audio", "reuniao", "telefone", "pauta"],
-  mobilidade: ["mobilidade", "escada", "rampa", "locomocao", "deslocamento", "rota"],
-  sensorial: ["sensorial", "barulho", "luz", "sobrecarga", "ruido", "iluminacao"],
-  atitudinal: ["atitudinal", "desrespeito", "preconceito", "capacitismo", "tratamento"],
-  digital: ["digital", "sistema", "portal", "acesso", "site", "ferramenta"],
-  organizacional: ["organizacional", "instrucoes", "rotina", "organizacao", "ambiguidade", "checklist"]
+const adaptacoesPorBarreira = {
+  comunicacao: "Usar comunicacao escrita, pauta previa, legenda e resumo objetivo.",
+  mobilidade: "Garantir rota acessivel, posto adequado e deslocamento seguro.",
+  sensorial: "Reduzir ruido/luz, prever pausas e posto com menor estimulo.",
+  digital: "Validar sistemas com acessibilidade e manter canal alternativo temporario.",
+  organizacional: "Criar checklist, rotina clara, prioridades explicitas e acompanhamento inicial.",
+  atitudinal: "Orientar lideranca/equipe e manter canal seguro de acompanhamento."
 };
 
-const adaptationByBarrier = {
-  comunicacao: "Definir canal preferencial, pauta previa, legenda e resumo por escrito.",
-  mobilidade: "Garantir rota acessivel, posto sem barreiras fisicas e plano de deslocamento seguro.",
-  sensorial: "Ajustar ruido, luz, pausas e possibilidade de posto com menor estimulo.",
-  atitudinal: "Alinhar equipe e lideranca sobre condutas inclusivas e canal seguro de acompanhamento.",
-  digital: "Validar ferramentas com teclado, leitor de tela, contraste e canal alternativo temporario.",
-  organizacional: "Criar rotina clara, checklist, prioridades explicitas e combinados de acompanhamento."
-};
-
-const parseJsonSafely = (value) => {
-  if (!value || typeof value !== "string") {
-    return value;
+const parseText = (value) => {
+  if (Array.isArray(value)) {
+    return value.join(" ");
   }
 
-  try {
-    return JSON.parse(value);
-  } catch (error) {
-    return value;
-  }
-};
-
-const toPlainText = (value) => {
-  const parsed = parseJsonSafely(value);
-
-  if (Array.isArray(parsed)) {
-    return parsed.map(toPlainText).join(" ");
+  if (value && typeof value === "object") {
+    return Object.values(value).map(parseText).join(" ");
   }
 
-  if (parsed && typeof parsed === "object") {
-    return Object.values(parsed).map(toPlainText).join(" ");
-  }
-
-  return String(parsed || "");
+  return String(value || "");
 };
 
 const unique = (items) => [...new Set(items.filter(Boolean))];
@@ -78,59 +41,68 @@ const tokenize = (text) => {
   );
 };
 
-const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
-
-const detectBarriers = (text) => {
-  const normalized = normalizeSearchText(text);
-
-  return TIPOS_BARREIRA.filter((barrier) => {
-    return barrierKeywords[barrier].some((word) => normalized.includes(word));
-  });
-};
-
 const intersection = (left, right) => {
   const rightSet = new Set(right);
   return left.filter((item) => rightSet.has(item));
 };
 
-const textFromFields = (entity, fields) => {
-  return fields.map((field) => toPlainText(entity[field])).join(" ");
-};
+const detectBarriers = (text) => {
+  const normalized = normalizeSearchText(text);
 
-const adaptationPotentialScore = (vaga) => {
-  const text = normalizeSearchText(vaga.possibilidade_de_adaptacao);
-  let score = 0;
-
-  if (text.includes("alta")) score += 20;
-  if (text.includes("media")) score += 12;
-  if (text.includes("baixa")) score += 4;
-  if (/(permite|flexivel|ajuste|adaptacao|remoto|alternativo)/.test(text)) score += 6;
-
-  return clamp(score, 0, 24);
-};
-
-const riskMessages = (barriers, vaga) => {
-  if (!barriers.length) {
-    return [];
-  }
-
-  return barriers.map((barrier) => (
-    `${barrier}: barreira prevista em ${vaga.titulo || "cargo"} deve ser acompanhada com adaptacoes.`
+  return Object.keys(adaptacoesPorBarreira).filter((barreira) => (
+    normalized.includes(barreira)
   ));
 };
 
-const recommendedAdaptations = (barriers, perfil) => {
-  const needs = toPlainText(perfil.necessidades_de_adaptacao);
-  const recommendations = barriers.map((barrier) => adaptationByBarrier[barrier]);
-
-  if (needs) {
-    recommendations.unshift(`Considerar necessidades informadas: ${needs}.`);
-  }
-
-  return unique(recommendations);
+const textFromFields = (entity, fields) => {
+  return fields.map((field) => parseText(entity[field])).join(" ");
 };
 
-const avaliarVaga = (perfil, vaga) => {
+const resolvePerfil = async (payload) => {
+  const perfilId = payload.perfil_funcional_id ||
+    payload.perfis_funcionais_idperfis_funcionais ||
+    payload.perfil_funcional?.idperfis_funcionais;
+
+  if (perfilId && !payload.perfil_funcional) {
+    return {
+      perfil: await perfisFuncionaisService.buscarPerfilFuncionalPorId(perfilId),
+      perfilId: Number(perfilId)
+    };
+  }
+
+  if (payload.perfil_funcional || payload.perfil) {
+    return {
+      perfil: payload.perfil_funcional || payload.perfil,
+      perfilId: perfilId ? Number(perfilId) : null
+    };
+  }
+
+  throw new AppError("Informe perfil_funcional ou perfil_funcional_id.", 400);
+};
+
+const resolveVaga = async (payload) => {
+  const vagaId = payload.vaga_id ||
+    payload.vagas_idvagas ||
+    payload.vaga?.idvagas;
+
+  if (vagaId && !payload.vaga) {
+    return {
+      vaga: await vagasService.buscarVagaPorId(vagaId),
+      vagaId: Number(vagaId)
+    };
+  }
+
+  if (payload.vaga) {
+    return {
+      vaga: payload.vaga,
+      vagaId: vagaId ? Number(vagaId) : null
+    };
+  }
+
+  throw new AppError("Informe vaga ou vaga_id.", 400);
+};
+
+const avaliarCompatibilidade = (perfil, vaga) => {
   const perfilCompetencias = textFromFields(perfil, [
     "habilidades_profissionais",
     "experiencias_anteriores",
@@ -146,161 +118,85 @@ const avaliarVaga = (perfil, vaga) => {
   const perfilBarreirasTexto = textFromFields(perfil, [
     "dificuldades_encontradas",
     "necessidades_de_adaptacao",
+    "barreiras_impactantes",
     "barreiras_que_impactam_o_desempenho"
   ]);
   const vagaBarreirasTexto = textFromFields(vaga, [
     "ambiente_de_trabalho",
     "barreiras_potenciais",
-    "rotina_da_funcao",
-    "ferramentas_utilizadas"
+    "rotina_da_funcao"
   ]);
 
   const competenciasEmComum = intersection(tokenize(perfilCompetencias), tokenize(vagaRequisitos));
   const barreirasPerfil = detectBarriers(perfilBarreirasTexto);
   const barreirasVaga = detectBarriers(vagaBarreirasTexto);
-  const barreirasDeRisco = intersection(barreirasPerfil, barreirasVaga);
-  const adaptacaoScore = adaptationPotentialScore(vaga);
-  const competenciaScore = Math.min(35, competenciasEmComum.length * 6);
-  const barreiraPenalty = barreirasDeRisco.length * 12 + (adaptacaoScore < 10 ? barreirasVaga.length * 3 : 0);
-  const compatibilidade = clamp(50 + competenciaScore + adaptacaoScore - barreiraPenalty, 0, 100);
-  const barreirasParaAdaptar = unique([...barreirasDeRisco, ...barreirasPerfil]);
+  const barreirasEmRisco = intersection(barreirasPerfil, barreirasVaga);
+  const adaptavel = /alta|media|adapt|flex|ajuste|possibilidade/i.test(
+    parseText(vaga.possibilidade_de_adaptacao)
+  );
+  const pontosCompetencia = Math.min(35, competenciasEmComum.length * 7);
+  const bonusAdaptacao = adaptavel ? 15 : 0;
+  const penalidadeBarreira = barreirasEmRisco.length * 12;
+  const pontuacao = Math.max(0, Math.min(100, 50 + pontosCompetencia + bonusAdaptacao - penalidadeBarreira));
+  const barreirasParaAdaptar = unique([...barreirasPerfil, ...barreirasEmRisco]);
+  const adaptacoes = barreirasParaAdaptar.map((barreira) => adaptacoesPorBarreira[barreira]);
+  const riscos = barreirasEmRisco.map((barreira) => (
+    `${barreira}: barreira tambem aparece no perfil e na vaga; exige acompanhamento humano.`
+  ));
 
   return {
-    idvagas: vaga.idvagas || null,
-    titulo: vaga.titulo,
-    area: vaga.area,
-    compatibilidade,
-    competencias_em_comum: competenciasEmComum,
-    barreiras_previstas: barreirasVaga,
-    barreiras_de_risco: barreirasDeRisco,
-    incidencia_de_barreiras: barreirasDeRisco.length,
-    adaptacoes_recomendadas: recommendedAdaptations(barreirasParaAdaptar, perfil),
-    riscos_de_incompatibilidade: riskMessages(barreirasDeRisco, vaga),
-    justificativa: `Compatibilidade calculada por habilidades em comum (${competenciasEmComum.length}), barreiras previstas (${barreirasDeRisco.length}) e adaptabilidade da vaga.`
+    pontuacao_compatibilidade: Number(pontuacao.toFixed(2)),
+    areas_recomendadas: unique([vaga.area, vaga.titulo]).filter(Boolean),
+    adaptacoes_recomendadas: unique(adaptacoes),
+    riscos,
+    justificativa: `Compatibilidade calculada por ${competenciasEmComum.length} termos profissionais em comum, ${barreirasEmRisco.length} barreiras de risco e possibilidade de adaptacao da vaga.`,
+    competencias_em_comum: competenciasEmComum
   };
 };
 
-const buildAreasMaisCompativeis = (avaliacoes) => {
-  const grouped = avaliacoes.reduce((acc, avaliacao) => {
-    const current = acc[avaliacao.area] || {
-      area: avaliacao.area,
-      total: 0,
-      soma: 0,
-      melhor_cargo: avaliacao.titulo,
-      melhor_compatibilidade: avaliacao.compatibilidade
-    };
-
-    current.total += 1;
-    current.soma += avaliacao.compatibilidade;
-
-    if (avaliacao.compatibilidade > current.melhor_compatibilidade) {
-      current.melhor_cargo = avaliacao.titulo;
-      current.melhor_compatibilidade = avaliacao.compatibilidade;
-    }
-
-    acc[avaliacao.area] = current;
-    return acc;
-  }, {});
-
-  return Object.values(grouped)
-    .map((item) => ({
-      area: item.area,
-      compatibilidade_media: Number((item.soma / item.total).toFixed(2)),
-      melhor_cargo: item.melhor_cargo,
-      melhor_compatibilidade: item.melhor_compatibilidade
-    }))
-    .sort((a, b) => b.compatibilidade_media - a.compatibilidade_media)
-    .slice(0, 3);
-};
-
-const buildPlanoAcolhimento = (adaptacoes) => [
-  "Validar com a pessoa as preferencias, necessidades e limites antes da alocacao.",
-  "Definir gestor responsavel, canal de acompanhamento e primeira revisao em ate 15 dias.",
-  "Aplicar adaptacoes iniciais sem reduzir autonomia ou escopo profissional.",
-  adaptacoes[0] || "Registrar combinados de trabalho e revisar barreiras percebidas no primeiro ciclo."
-];
-
-const resolvePerfil = async (payload) => {
-  const perfilId = payload.perfil_funcional_id || payload.perfis_funcionais_idperfis_funcionais;
-
-  if (perfilId) {
-    const perfil = await perfisFuncionaisService.buscarPerfilFuncionalPorId(perfilId);
-    return { perfil, perfilId };
-  }
-
-  if (payload.perfil_funcional || payload.perfil) {
-    return { perfil: payload.perfil_funcional || payload.perfil, perfilId: null };
-  }
-
-  throw new AppError("Informe perfil_funcional_id ou perfil_funcional.", 400);
-};
-
-const resolveVagas = async (payload) => {
-  if (Array.isArray(payload.vaga_ids) || payload.vaga_id) {
-    const ids = Array.isArray(payload.vaga_ids) ? payload.vaga_ids : [payload.vaga_id];
-    return vagasService.buscarVagasPorIds(ids.map(Number));
-  }
-
-  if (Array.isArray(payload.vagas)) {
-    return payload.vagas;
-  }
-
-  if (payload.vaga) {
-    return [payload.vaga];
-  }
-
-  const vagasAtivas = await vagasService.listarVagas({ ativo: 1 });
-
-  if (!vagasAtivas.length) {
-    throw new AppError("Nenhuma vaga ativa encontrada para avaliacao.", 404);
-  }
-
-  return vagasAtivas;
+const listarMatches = async () => {
+  return matchQueries.listar();
 };
 
 const avaliarMatch = async (payload) => {
+  const inicio = process.hrtime.bigint();
   const { perfil, perfilId } = await resolvePerfil(payload);
-  const vagas = await resolveVagas(payload);
+  const { vaga, vagaId } = await resolveVaga(payload);
+  const avaliacao = avaliarCompatibilidade(perfil, vaga);
+  const tempoResposta = Number((Number(process.hrtime.bigint() - inicio) / 1e9).toFixed(3));
+  let id = null;
 
-  if (!vagas.length) {
-    throw new AppError("Informe ao menos uma vaga para avaliar.", 400);
+  if (perfilId && vagaId) {
+    id = await matchQueries.criar({
+      pontuacao_compatibilidade: avaliacao.pontuacao_compatibilidade,
+      areas_recomendadas: JSON.stringify(avaliacao.areas_recomendadas),
+      adaptacoes_recomendadas: JSON.stringify(avaliacao.adaptacoes_recomendadas),
+      riscos_incompatibilidade: JSON.stringify(avaliacao.riscos),
+      justificativa: avaliacao.justificativa,
+      plano_inicial_acolhimento: JSON.stringify([
+        "Confirmar preferencias e adaptacoes com a pessoa.",
+        "Alinhar gestor responsavel e canal de acompanhamento.",
+        "Revisar barreiras percebidas nos primeiros 15 dias."
+      ]),
+      perfis_funcionais_idperfis_funcionais: perfilId,
+      vagas_idvagas: vagaId
+    });
   }
 
-  const ranking = vagas
-    .map((vaga) => avaliarVaga(perfil, vaga))
-    .sort((a, b) => b.compatibilidade - a.compatibilidade);
-  const cargosComMenorIncidencia = [...ranking]
-    .sort((a, b) => a.incidencia_de_barreiras - b.incidencia_de_barreiras || b.compatibilidade - a.compatibilidade)
-    .slice(0, 3)
-    .map((item) => ({
-      idvagas: item.idvagas,
-      titulo: item.titulo,
-      area: item.area,
-      compatibilidade: item.compatibilidade,
-      incidencia_de_barreiras: item.incidencia_de_barreiras
-    }));
-  const adaptacoes = unique(ranking.flatMap((item) => item.adaptacoes_recomendadas));
-  const riscos = unique(ranking.flatMap((item) => item.riscos_de_incompatibilidade));
-
-  const resultado = {
-    areas_com_maior_compatibilidade: buildAreasMaisCompativeis(ranking),
-    cargos_com_menor_incidencia_de_barreiras: cargosComMenorIncidencia,
-    adaptacoes_recomendadas: adaptacoes,
-    riscos_de_incompatibilidade: riscos,
-    justificativa: "Match orientativo calculado por sobreposicao de habilidades, barreiras previstas e possibilidade de adaptacao. O resultado nao deve excluir automaticamente a pessoa de vagas.",
-    plano_inicial_de_acolhimento: buildPlanoAcolhimento(adaptacoes),
-    ranking_compatibilidade: ranking
-  };
-
-  const id = await matchQueries.criar({
-    perfis_funcionais_idperfis_funcionais: perfilId,
-    entrada_json: payload,
-    resultado_json: resultado
-  });
+  if (payload.solicitacoes_idsolicitacoes) {
+    await logsIaService.registrarLogIa({
+      entrada_texto: JSON.stringify({ perfil_funcional: perfil, vaga }),
+      saida_classificacao: avaliacao,
+      modelo_utilizado: "simulador_regras_v1",
+      tempo_resposta: tempoResposta,
+      tipo_processo: "match",
+      solicitacoes_idsolicitacoes: payload.solicitacoes_idsolicitacoes
+    });
+  }
 
   return {
-    id,
-    ...resultado
+    idmatches: id,
+    ...avaliacao
   };
 };
 
@@ -308,17 +204,14 @@ const buscarMatchPorId = async (id) => {
   const avaliacao = await matchQueries.buscarPorId(id);
 
   if (!avaliacao) {
-    throw new AppError("Avaliacao de match nao encontrada.", 404);
+    throw new AppError("Match nao encontrado.", 404);
   }
 
-  return {
-    ...avaliacao,
-    entrada_json: parseJsonSafely(avaliacao.entrada_json),
-    resultado_json: parseJsonSafely(avaliacao.resultado_json)
-  };
+  return avaliacao;
 };
 
 module.exports = {
   avaliarMatch,
-  buscarMatchPorId
+  buscarMatchPorId,
+  listarMatches
 };

@@ -9,55 +9,49 @@ const {
 const TABLE = "solicitacoes";
 const ID_COLUMN = "idsolicitacoes";
 const CREATE_FIELDS = [
-  "usuarios_idusuarios",
   "canal",
   "tipo_barreira",
-  "dificuldade_encontrada",
-  "contexto",
-  "impacto_trabalho",
-  "descricao",
   "urgencia",
-  "prioridade",
-  "preferencia_comunicacao",
-  "necessidade_apoio_imediato",
   "area_responsavel",
-  "status",
   "precisa_profissional",
   "confianca_ia",
-  "classificacao_inicial_ia",
   "classificacao_ia_json",
-  "sla_horas",
-  "prazo_sla",
+  "atualizado_em",
+  "criado_em",
+  "descricao_dificuldade",
+  "descricao_original",
+  "contexto_problema",
+  "impacto_trabalho",
+  "preferencia_comunicacao",
+  "apoio_imediato",
+  "prioridade",
+  "sla_resposta_horas",
+  "sla_resolucao_horas",
   "data_primeira_resposta",
   "data_resolucao",
-  "recorrencia_chave",
-  "criado_em",
-  "atualizado_em"
+  "usuarios_idusuarios"
 ];
 const UPDATE_FIELDS = [
-  "usuarios_idusuarios",
   "canal",
   "tipo_barreira",
-  "dificuldade_encontrada",
-  "contexto",
-  "impacto_trabalho",
-  "descricao",
   "urgencia",
-  "prioridade",
-  "preferencia_comunicacao",
-  "necessidade_apoio_imediato",
   "area_responsavel",
-  "status",
   "precisa_profissional",
   "confianca_ia",
-  "classificacao_inicial_ia",
   "classificacao_ia_json",
-  "sla_horas",
-  "prazo_sla",
+  "atualizado_em",
+  "descricao_dificuldade",
+  "descricao_original",
+  "contexto_problema",
+  "impacto_trabalho",
+  "preferencia_comunicacao",
+  "apoio_imediato",
+  "prioridade",
+  "sla_resposta_horas",
+  "sla_resolucao_horas",
   "data_primeira_resposta",
   "data_resolucao",
-  "recorrencia_chave",
-  "atualizado_em"
+  "usuarios_idusuarios"
 ];
 
 const listar = async (filters = {}) => {
@@ -67,9 +61,8 @@ const listar = async (filters = {}) => {
     "urgencia",
     "prioridade",
     "area_responsavel",
-    "status",
     "usuarios_idusuarios",
-    "necessidade_apoio_imediato"
+    "apoio_imediato"
   ]));
 
   const [rows] = await db.query(

@@ -1,144 +1,118 @@
 const db = require("../config/db");
 
-const groupBySolicitacoes = async (column) => {
-  const [rows] = await db.query(
-    `SELECT ${column} AS categoria, COUNT(*) AS total
-       FROM solicitacoes
-      GROUP BY ${column}
-      ORDER BY total DESC`
-  );
-
-  return rows;
-};
-
-const totalDemandasAbertas = async () => {
-  const [[row]] = await db.query(
-    `SELECT COUNT(*) AS total
-       FROM solicitacoes
-      WHERE status IN ('aberta', 'em_triagem', 'em_andamento', 'encaminhada')`
-  );
-
-  return row.total;
-};
-
-const tempoMedioResposta = async () => {
-  const [[row]] = await db.query(
-    `SELECT AVG(TIMESTAMPDIFF(MINUTE, criado_em, data_primeira_resposta)) / 60 AS horas
-       FROM solicitacoes
-      WHERE data_primeira_resposta IS NOT NULL`
-  );
-
-  return Number(row.horas || 0);
-};
-
-const tempoMedioResolucao = async () => {
-  const [[row]] = await db.query(
-    `SELECT AVG(TIMESTAMPDIFF(MINUTE, criado_em, data_resolucao)) / 60 AS horas
-       FROM solicitacoes
-      WHERE data_resolucao IS NOT NULL`
-  );
-
-  return Number(row.horas || 0);
-};
-
-const percentualResolvido = async () => {
-  const [[row]] = await db.query(
+const resumo = async () => {
+  const [[solicitacoes]] = await db.query(
     `SELECT
-       COUNT(*) AS total,
-       SUM(CASE WHEN status IN ('resolvida', 'concluida') THEN 1 ELSE 0 END) AS resolvidas
+       COUNT(*) AS total_solicitacoes,
+       SUM(CASE WHEN apoio_imediato = 1 THEN 1 ELSE 0 END) AS total_apoio_imediato,
+       COUNT(DISTINCT usuarios_idusuarios) AS usuarios_com_solicitacao,
+       AVG(confianca_ia) AS confianca_media_ia
      FROM solicitacoes`
   );
+  const [[solucoes]] = await db.query(
+    `SELECT
+       COUNT(*) AS total_solucoes,
+       SUM(CASE WHEN ativo = 1 THEN 1 ELSE 0 END) AS solucoes_ativas
+     FROM solucoes`
+  );
+  const [[matches]] = await db.query(
+    `SELECT COUNT(*) AS total_matches FROM matches`
+  );
 
-  if (!row.total) {
-    return 0;
-  }
-
-  return Number(((row.resolvidas / row.total) * 100).toFixed(2));
+  return {
+    total_solicitacoes: solicitacoes.total_solicitacoes,
+    total_apoio_imediato: Number(solicitacoes.total_apoio_imediato || 0),
+    usuarios_com_solicitacao: solicitacoes.usuarios_com_solicitacao,
+    confianca_media_ia: Number(Number(solicitacoes.confianca_media_ia || 0).toFixed(2)),
+    total_solucoes: solucoes.total_solucoes,
+    solucoes_ativas: Number(solucoes.solucoes_ativas || 0),
+    total_matches: matches.total_matches
+  };
 };
 
-const reincidenciaPorBarreira = async () => {
+const barreiras = async () => {
   const [rows] = await db.query(
     `SELECT
        tipo_barreira,
-       COUNT(*) AS total_casos,
-       GREATEST(COUNT(*) - COUNT(DISTINCT COALESCE(recorrencia_chave, idsolicitacoes)), 0) AS recorrencias
+       COUNT(*) AS total,
+       AVG(confianca_ia) AS confianca_media_ia,
+       AVG(sla_resposta_horas) AS sla_resposta_medio_horas,
+       AVG(sla_resolucao_horas) AS sla_resolucao_medio_horas
      FROM solicitacoes
      GROUP BY tipo_barreira
-     ORDER BY recorrencias DESC, total_casos DESC`
-  );
-
-  return rows;
-};
-
-const satisfacaoMedia = async () => {
-  const [[row]] = await db.query(
-    `SELECT AVG(COALESCE(NULLIF(nota, 0), nota_satisfacao)) AS media
-       FROM feedbacks
-      WHERE COALESCE(NULLIF(nota, 0), nota_satisfacao) IS NOT NULL`
-  );
-
-  return Number(Number(row.media || 0).toFixed(2));
-};
-
-const gargalosPorArea = async () => {
-  const [rows] = await db.query(
-    `SELECT
-       area_responsavel,
-       COUNT(*) AS total_abertas,
-       SUM(CASE WHEN prazo_sla IS NOT NULL AND prazo_sla < NOW() THEN 1 ELSE 0 END) AS demandas_atrasadas,
-       AVG(CASE
-         WHEN data_primeira_resposta IS NOT NULL
-         THEN TIMESTAMPDIFF(MINUTE, criado_em, data_primeira_resposta) / 60
-         ELSE NULL
-       END) AS tempo_medio_resposta_horas
-     FROM solicitacoes
-     WHERE status IN ('aberta', 'em_triagem', 'em_andamento', 'encaminhada')
-     GROUP BY area_responsavel
-     ORDER BY demandas_atrasadas DESC, total_abertas DESC`
+     ORDER BY total DESC`
   );
 
   return rows.map((row) => ({
     ...row,
-    tempo_medio_resposta_horas: Number(Number(row.tempo_medio_resposta_horas || 0).toFixed(2))
+    confianca_media_ia: Number(Number(row.confianca_media_ia || 0).toFixed(2)),
+    sla_resposta_medio_horas: Number(Number(row.sla_resposta_medio_horas || 0).toFixed(2)),
+    sla_resolucao_medio_horas: Number(Number(row.sla_resolucao_medio_horas || 0).toFixed(2))
   }));
 };
 
-const indicadores = async () => {
-  const [
-    abertas,
-    porStatus,
-    porTipoBarreira,
-    respostaHoras,
-    resolucaoHoras,
-    resolvidoPercentual,
-    reincidencias,
-    satisfacao,
-    gargalos
-  ] = await Promise.all([
-    totalDemandasAbertas(),
-    groupBySolicitacoes("status"),
-    groupBySolicitacoes("tipo_barreira"),
-    tempoMedioResposta(),
-    tempoMedioResolucao(),
-    percentualResolvido(),
-    reincidenciaPorBarreira(),
-    satisfacaoMedia(),
-    gargalosPorArea()
+const tempoMedioGeral = async () => {
+  const [[row]] = await db.query(
+    `SELECT
+       AVG(TIMESTAMPDIFF(MINUTE, criado_em, data_primeira_resposta)) / 60 AS tempo_medio_resposta_horas,
+       AVG(TIMESTAMPDIFF(MINUTE, criado_em, data_resolucao)) / 60 AS tempo_medio_resolucao_horas
+     FROM solicitacoes`
+  );
+
+  return {
+    tempo_medio_resposta_horas: Number(Number(row.tempo_medio_resposta_horas || 0).toFixed(2)),
+    tempo_medio_resolucao_horas: Number(Number(row.tempo_medio_resolucao_horas || 0).toFixed(2))
+  };
+};
+
+const tempoMedioPorArea = async () => {
+  const [rows] = await db.query(
+    `SELECT
+       area_responsavel,
+       COUNT(*) AS total,
+       AVG(TIMESTAMPDIFF(MINUTE, criado_em, data_primeira_resposta)) / 60 AS tempo_medio_resposta_horas,
+       AVG(TIMESTAMPDIFF(MINUTE, criado_em, data_resolucao)) / 60 AS tempo_medio_resolucao_horas
+     FROM solicitacoes
+     GROUP BY area_responsavel
+     ORDER BY tempo_medio_resolucao_horas DESC`
+  );
+
+  return rows.map((row) => ({
+    ...row,
+    tempo_medio_resposta_horas: Number(Number(row.tempo_medio_resposta_horas || 0).toFixed(2)),
+    tempo_medio_resolucao_horas: Number(Number(row.tempo_medio_resolucao_horas || 0).toFixed(2))
+  }));
+};
+
+const tempoMedio = async () => {
+  const [geral, porArea] = await Promise.all([
+    tempoMedioGeral(),
+    tempoMedioPorArea()
   ]);
 
   return {
-    total_demandas_abertas: abertas,
-    total_por_status: porStatus,
-    total_por_tipo_barreira: porTipoBarreira,
-    tempo_medio_resposta_horas: Number(respostaHoras.toFixed(2)),
-    tempo_medio_resolucao_horas: Number(resolucaoHoras.toFixed(2)),
-    percentual_resolvido: resolvidoPercentual,
-    reincidencia_por_barreira: reincidencias,
-    satisfacao_media: satisfacao,
-    gargalos_por_area: gargalos
+    geral,
+    por_area: porArea
+  };
+};
+
+const indicadores = async () => {
+  const [dadosResumo, dadosBarreiras, dadosTempoMedio] = await Promise.all([
+    resumo(),
+    barreiras(),
+    tempoMedio()
+  ]);
+
+  return {
+    resumo: dadosResumo,
+    barreiras: dadosBarreiras,
+    tempo_medio: dadosTempoMedio
   };
 };
 
 module.exports = {
-  indicadores
+  barreiras,
+  indicadores,
+  resumo,
+  tempoMedio
 };

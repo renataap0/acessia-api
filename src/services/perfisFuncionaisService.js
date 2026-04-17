@@ -1,6 +1,6 @@
 const perfisFuncionaisQueries = require("../queries/perfisFuncionaisQueries");
 const AppError = require("../utils/AppError");
-const { toTextValue, toTinyInt } = require("../utils/normalize");
+const { normalizeDate, toTextValue } = require("../utils/normalize");
 
 const TEXT_FIELDS = [
   "habilidades_profissionais",
@@ -9,28 +9,28 @@ const TEXT_FIELDS = [
   "dificuldades_encontradas",
   "preferencias_de_comunicacao",
   "necessidades_de_adaptacao",
-  "barreiras_que_impactam_o_desempenho",
+  "barreiras_impactantes",
   "tipo_de_apoio_necessario"
 ];
 
 const normalizePayload = (payload, isCreate = false) => {
   const normalized = {
     ...payload,
-    ativo: payload.ativo === undefined ? (isCreate ? 1 : undefined) : toTinyInt(payload.ativo)
+    barreiras_impactantes: payload.barreiras_impactantes ||
+      payload.barreiras_que_impactam_o_desempenho,
+    created_at: payload.created_at || (isCreate ? normalizeDate(payload.criado_em) : undefined),
+    updated_at: normalizeDate(payload.updated_at || payload.atualizado_em)
   };
 
   TEXT_FIELDS.forEach((field) => {
-    normalized[field] = toTextValue(payload[field]);
+    normalized[field] = toTextValue(normalized[field]);
   });
 
   return normalized;
 };
 
 const listarPerfisFuncionais = (filters) => {
-  return perfisFuncionaisQueries.listar({
-    ...filters,
-    ativo: filters.ativo === undefined ? undefined : toTinyInt(filters.ativo)
-  });
+  return perfisFuncionaisQueries.listar(filters);
 };
 
 const buscarPerfilFuncionalPorId = async (id) => {

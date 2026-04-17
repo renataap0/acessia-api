@@ -117,6 +117,7 @@ const classificarTexto = (texto, metadados = {}) => {
     area_responsavel: bestMatch.area_responsavel,
     precisa_profissional: bestMatch.precisa_profissional,
     confianca_ia: confianca,
+    acao_imediata: bestMatch.acao_imediata_sugerida,
     acao_imediata_sugerida: bestMatch.acao_imediata_sugerida,
     classificacao_ia_json: classificacaoIaJson
   };

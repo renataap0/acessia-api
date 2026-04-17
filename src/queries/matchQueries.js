@@ -1,26 +1,69 @@
 const db = require("../config/db");
-const { toJsonString } = require("../utils/normalize");
 
-const TABLE = "match_avaliacoes";
+const TABLE = "matches";
+const ID_COLUMN = "idmatches";
 
-const criar = async ({ perfis_funcionais_idperfis_funcionais, entrada_json, resultado_json }) => {
+const criar = async ({
+  pontuacao_compatibilidade,
+  areas_recomendadas,
+  adaptacoes_recomendadas,
+  riscos_incompatibilidade,
+  justificativa,
+  plano_inicial_acolhimento,
+  perfis_funcionais_idperfis_funcionais,
+  vagas_idvagas
+}) => {
   const [result] = await db.query(
     `INSERT INTO ${TABLE}
-      (perfis_funcionais_idperfis_funcionais, entrada_json, resultado_json)
-     VALUES (?, ?, ?)`,
+      (
+        pontuacao_compatibilidade,
+        areas_recomendadas,
+        adaptacoes_recomendadas,
+        riscos_incompatibilidade,
+        justificativa,
+        plano_inicial_acolhimento,
+        perfis_funcionais_idperfis_funcionais,
+        vagas_idvagas
+      )
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
     [
-      perfis_funcionais_idperfis_funcionais || null,
-      toJsonString(entrada_json),
-      toJsonString(resultado_json)
+      pontuacao_compatibilidade,
+      areas_recomendadas,
+      adaptacoes_recomendadas,
+      riscos_incompatibilidade,
+      justificativa,
+      plano_inicial_acolhimento,
+      perfis_funcionais_idperfis_funcionais,
+      vagas_idvagas
     ]
   );
 
   return result.insertId;
 };
 
+const listar = async () => {
+  const [rows] = await db.query(
+    `SELECT
+       m.*,
+       v.titulo AS vaga_titulo,
+       v.area AS vaga_area
+     FROM ${TABLE} m
+     LEFT JOIN vagas v ON v.idvagas = m.vagas_idvagas
+     ORDER BY m.${ID_COLUMN} DESC`
+  );
+
+  return rows;
+};
+
 const buscarPorId = async (id) => {
   const [rows] = await db.query(
-    `SELECT * FROM ${TABLE} WHERE idmatch_avaliacoes = ?`,
+    `SELECT
+       m.*,
+       v.titulo AS vaga_titulo,
+       v.area AS vaga_area
+     FROM ${TABLE} m
+     LEFT JOIN vagas v ON v.idvagas = m.vagas_idvagas
+     WHERE m.${ID_COLUMN} = ?`,
     [id]
   );
 
@@ -29,5 +72,6 @@ const buscarPorId = async (id) => {
 
 module.exports = {
   buscarPorId,
-  criar
+  criar,
+  listar
 };

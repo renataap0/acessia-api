@@ -12,31 +12,37 @@ const assertAllowed = (field, value, allowedValues) => {
   }
 };
 
-const normalizePayload = (payload, isCreate = false) => {
-  const contextoProblema = payload.contexto_problema || payload.descricao_problema;
-  const solucaoProvisoria = payload.solucao_provisoria || payload.solucao_imediata;
-  const acaoRecomendada = payload.acao_recomendada || solucaoProvisoria;
-
-  return {
-    ...payload,
-    contexto_problema: contextoProblema,
-    descricao_problema: payload.descricao_problema || contextoProblema,
-    acao_recomendada: acaoRecomendada,
-    solucao_provisoria: solucaoProvisoria,
-    solucao_imediata: payload.solucao_imediata || solucaoProvisoria,
-    urgencia: payload.urgencia || (isCreate ? "media" : undefined),
-    ativo: payload.ativo === undefined
-      ? (isCreate ? 1 : undefined)
-      : toTinyInt(payload.ativo)
-  };
-};
+const normalizePayload = (payload, isCreate = false) => ({
+  ...payload,
+  solucao_provisoria: payload.solucao_provisoria,
+  contexto_problema: payload.contexto_problema,
+  urgencia: payload.urgencia || (isCreate ? "media" : undefined),
+  tipo_barreira: payload.tipo_barreira,
+  acao_recomendada: payload.acao_recomendada || payload.solucao_provisoria,
+  area_responsavel: payload.area_responsavel,
+  ativo: payload.ativo === undefined ? (isCreate ? 1 : undefined) : toTinyInt(payload.ativo),
+  solucao_estrutural: payload.solucao_estrutural,
+  custo_estimado: payload.custo_estimado === undefined ? (isCreate ? 0 : undefined) : payload.custo_estimado,
+  prazo_estimado_dias: payload.prazo_estimado_dias === undefined
+    ? (isCreate ? 1 : undefined)
+    : payload.prazo_estimado_dias
+});
 
 const validatePayload = (payload) => {
   assertAllowed("tipo_barreira", payload.tipo_barreira, TIPOS_BARREIRA);
   assertAllowed("urgencia", payload.urgencia, URGENCIAS);
+
+  if (payload.custo_estimado !== undefined && Number.isNaN(Number(payload.custo_estimado))) {
+    throw new AppError("custo_estimado deve ser numerico.", 400);
+  }
+
+  if (payload.prazo_estimado_dias !== undefined &&
+    (!Number.isInteger(Number(payload.prazo_estimado_dias)) || Number(payload.prazo_estimado_dias) < 0)) {
+    throw new AppError("prazo_estimado_dias deve ser um inteiro positivo.", 400);
+  }
 };
 
-const listarSolucoes = (filters) => {
+const listarSolucoes = (filters = {}) => {
   return solucoesQueries.listar({
     ...filters,
     ativo: filters.ativo === undefined ? undefined : toTinyInt(filters.ativo)

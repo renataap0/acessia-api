@@ -10,6 +10,11 @@ const avaliar = asyncHandler(async (req, res) => {
   });
 });
 
+const listar = asyncHandler(async (req, res) => {
+  const matches = await matchService.listarMatches();
+  res.json({ sucesso: true, dados: matches });
+});
+
 const buscarPorId = asyncHandler(async (req, res) => {
   const avaliacao = await matchService.buscarMatchPorId(req.params.id);
   res.json({ sucesso: true, dados: avaliacao });
@@ -17,5 +22,6 @@ const buscarPorId = asyncHandler(async (req, res) => {
 
 module.exports = {
   avaliar,
-  buscarPorId
+  buscarPorId,
+  listar
 };

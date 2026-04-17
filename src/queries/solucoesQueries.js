@@ -9,32 +9,28 @@ const {
 const TABLE = "solucoes";
 const ID_COLUMN = "idsolucoes";
 const CREATE_FIELDS = [
-  "titulo",
-  "tipo_barreira",
+  "solucao_provisoria",
   "contexto_problema",
+  "urgencia",
+  "tipo_barreira",
   "acao_recomendada",
   "area_responsavel",
-  "urgencia",
-  "solucao_provisoria",
+  "ativo",
   "solucao_estrutural",
-  "descricao_problema",
-  "solucao_imediata",
-  "publico_indicado",
-  "ativo"
+  "custo_estimado",
+  "prazo_estimado_dias"
 ];
 const UPDATE_FIELDS = [
-  "titulo",
-  "tipo_barreira",
+  "solucao_provisoria",
   "contexto_problema",
+  "urgencia",
+  "tipo_barreira",
   "acao_recomendada",
   "area_responsavel",
-  "urgencia",
-  "solucao_provisoria",
+  "ativo",
   "solucao_estrutural",
-  "descricao_problema",
-  "solucao_imediata",
-  "publico_indicado",
-  "ativo"
+  "custo_estimado",
+  "prazo_estimado_dias"
 ];
 
 const listar = async (filters = {}) => {
@@ -56,6 +52,30 @@ const buscarPorId = async (id) => {
   return rows[0] || null;
 };
 
+const buscarRecomendadas = async ({ tipo_barreira, area_responsavel, limite = 3 }) => {
+  const values = [tipo_barreira];
+  let areaClause = "";
+
+  if (area_responsavel) {
+    areaClause = " AND area_responsavel = ?";
+    values.push(area_responsavel);
+  }
+
+  values.push(Number(limite));
+
+  const [rows] = await db.query(
+    `SELECT *
+       FROM ${TABLE}
+      WHERE ativo = 1
+        AND tipo_barreira = ?${areaClause}
+      ORDER BY prazo_estimado_dias ASC, custo_estimado ASC
+      LIMIT ?`,
+    values
+  );
+
+  return rows;
+};
+
 const criar = async (payload) => {
   const data = pickDefined(payload, CREATE_FIELDS);
   const { sql, values } = buildInsertQuery(TABLE, data);
@@ -73,6 +93,7 @@ const atualizar = async (id, payload) => {
 module.exports = {
   atualizar,
   buscarPorId,
+  buscarRecomendadas,
   criar,
   listar
 };

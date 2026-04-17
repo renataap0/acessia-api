@@ -173,13 +173,13 @@ VALUES
 ('Suporte Interno','RH','Atendimento interno, organizacao e suporte a processos','Rotina previsivel','Ambiente corporativo','Email, sistema, documentos','Poucas barreiras, depende de organizacao','Alta possibilidade de adaptacao',1,'2026-04-15 13:20:00','2026-04-15 13:20:00');
 
 INSERT INTO matches
-(pontuacao_compatibilidade, areas_recomendadas, adaptacoes_recomendadas, riscos_incompatibilidade, justificativa, plano_inicial_acolhimento, created_at)
+(pontuacao_compatibilidade, areas_recomendadas, adaptacoes_recomendadas, riscos_incompatibilidade, justificativa, plano_inicial_acolhimento, created_at, perfis_funcionais_idperfis_funcionais, vagas_idvagas)
 VALUES
-(0.92,'Administrativo interno','Checklist visual e instrucao objetiva','Baixo risco','Perfil com boa aderencia a rotina estruturada','Acompanhamento semanal inicial','2026-04-15 14:00:00'),
-(0.89,'TI e analise de dados','Recursos visuais e comunicacao escrita','Baixo risco','Boa compatibilidade com ambiente digital e comunicacao textual','Treinamento inicial acessivel','2026-04-15 14:05:00'),
-(0.78,'Controle operacional','Reducao de ruido e posto mais adequado','Risco medio por ruido','Perfil tecnico com necessidade de ambiente menos estimulante','Ajuste gradual do posto','2026-04-15 14:10:00'),
-(0.81,'Suporte interno','Planejamento claro e rotina definida','Risco medio por desorganizacao da area','Boa energia e dinamismo com necessidade de estrutura','Mentoria inicial com gestor','2026-04-15 14:15:00'),
-(0.94,'RH e administrativo','Acesso fisico adequado e posto adaptado','Baixo risco','Alta compatibilidade com area interna e menor deslocamento','Validacao das adaptacoes antes do inicio','2026-04-15 14:20:00');
+(92.00,'Administrativo interno','Checklist visual e instrucao objetiva','Baixo risco','Perfil com boa aderencia a rotina estruturada','Acompanhamento semanal inicial','2026-04-15 14:00:00',1,1),
+(89.00,'TI e analise de dados','Recursos visuais e comunicacao escrita','Baixo risco','Boa compatibilidade com ambiente digital e comunicacao textual','Treinamento inicial acessivel','2026-04-15 14:05:00',2,2),
+(78.00,'Controle operacional','Reducao de ruido e posto mais adequado','Risco medio por ruido','Perfil tecnico com necessidade de ambiente menos estimulante','Ajuste gradual do posto','2026-04-15 14:10:00',3,4),
+(81.00,'Suporte interno','Planejamento claro e rotina definida','Risco medio por desorganizacao da area','Boa energia e dinamismo com necessidade de estrutura','Mentoria inicial com gestor','2026-04-15 14:15:00',4,5),
+(94.00,'RH e administrativo','Acesso fisico adequado e posto adaptado','Baixo risco','Alta compatibilidade com area interna e menor deslocamento','Validacao das adaptacoes antes do inicio','2026-04-15 14:20:00',5,5);
 
 SELECT * FROM solicitacoes;
 SELECT * FROM solucoes;

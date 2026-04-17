@@ -4,7 +4,7 @@ const TABLE = "solucoes_has_solicitacoes";
 
 const vincular = async ({ solucoes_idsolucoes, solicitacoes_idsolicitacoes }) => {
   const [result] = await db.query(
-    `INSERT INTO ${TABLE} (solucoes_idsolucoes, solicitacoes_idsolicitacoes) VALUES (?, ?)`,
+    `INSERT IGNORE INTO ${TABLE} (solucoes_idsolucoes, solicitacoes_idsolicitacoes) VALUES (?, ?)`,
     [solucoes_idsolucoes, solicitacoes_idsolicitacoes]
   );
 

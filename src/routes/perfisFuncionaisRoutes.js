@@ -13,17 +13,15 @@ const {
 } = require("../middlewares/validate");
 
 const perfilFields = [
-  "usuarios_idusuarios",
-  "identificador",
   "habilidades_profissionais",
   "experiencias_anteriores",
   "facilidades_no_ambiente",
-  "dificuldades_encontradas",
   "preferencias_de_comunicacao",
+  "dificuldades_encontradas",
   "necessidades_de_adaptacao",
+  "barreiras_impactantes",
   "barreiras_que_impactam_o_desempenho",
-  "tipo_de_apoio_necessario",
-  "ativo"
+  "tipo_de_apoio_necessario"
 ];
 
 router.get("/", listarPerfisFuncionais);

@@ -21,13 +21,11 @@ router.post(
   "/",
   validateRequiredFields([
     "canal",
-    "tipo_barreira",
-    "dificuldade_encontrada",
-    "contexto",
+    "descricao_dificuldade",
+    "contexto_problema",
     "impacto_trabalho",
-    "urgencia",
-    "area_responsavel",
-    "preferencia_comunicacao"
+    "preferencia_comunicacao",
+    "usuarios_idusuarios"
   ]),
   criarSolicitacao
 );
@@ -37,20 +35,21 @@ router.put(
   validateAtLeastOneField([
     "canal",
     "tipo_barreira",
-    "dificuldade_encontrada",
-    "contexto",
+    "descricao_dificuldade",
+    "descricao_original",
+    "contexto_problema",
     "impacto_trabalho",
     "urgencia",
     "prioridade",
     "preferencia_comunicacao",
-    "necessidade_apoio_imediato",
+    "apoio_imediato",
     "area_responsavel",
-    "status",
     "precisa_profissional",
     "classificacao_ia_json",
-    "sla_horas",
-    "prazo_sla",
-    "recorrencia_chave",
+    "sla_resposta_horas",
+    "sla_resolucao_horas",
+    "data_primeira_resposta",
+    "data_resolucao",
     "usuarios_idusuarios"
   ]),
   atualizarSolicitacao
